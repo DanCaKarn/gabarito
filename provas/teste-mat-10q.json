@@ -1,0 +1,14 @@
+{
+  "codigo": "teste-mat-10q",
+  "titulo": "Avaliação de Matemática",
+  "escola": "EEEM Dr. Francisco Freitas Lima",
+  "data": "24/11/2026",
+  "questoes": 10,
+  "alternativas": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "bloco": "Matemática"
+}

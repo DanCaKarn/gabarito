@@ -1,0 +1,7 @@
+# LGPD: dados reais e saídas (cartões com nomes) nunca vão para o git
+dados/*
+!dados/exemplo.csv
+saida/
+.venv/
+__pycache__/
+*.pyc

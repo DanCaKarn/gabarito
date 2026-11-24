@@ -1,0 +1,22 @@
+[
+  {
+    "prova": "provas/mat-2026-11-25-8c.json",
+    "turma": "8C",
+    "formato": "a6x4"
+  },
+  {
+    "prova": "provas/mat-2026-11-25-8d.json",
+    "turma": "8D",
+    "formato": "a6x4"
+  },
+  {
+    "prova": "provas/mat-2026-11-25-9c.json",
+    "turma": "9C",
+    "formato": "a6x4"
+  },
+  {
+    "prova": "provas/mat-2026-11-25-9d.json",
+    "turma": "9D",
+    "formato": "a6x4"
+  }
+]

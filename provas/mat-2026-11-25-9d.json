@@ -1,0 +1,14 @@
+{
+  "codigo": "mat-2026-11-25-9d",
+  "titulo": "Avaliação de Matemática",
+  "escola": "UMEF Ulisses Álvares",
+  "data": "25/11/2026",
+  "questoes": 10,
+  "alternativas": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "bloco": "Matemática"
+}

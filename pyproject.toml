@@ -1,0 +1,10 @@
+[project]
+name = "gabarito"
+version = "0.1.0"
+description = "Gerador de cartões-resposta (módulo de simulados da Caderneta)"
+requires-python = ">=3.10"
+dependencies = [
+    "pillow>=12.3.0",
+    "reportlab>=5.1.0",
+    "segno>=1.6.6",
+]
