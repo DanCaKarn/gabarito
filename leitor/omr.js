@@ -17,6 +17,7 @@
     DIF_MIN: 18,             // ... e pelo menos DIF_MIN níveis abaixo da média (ignora ruído em fundo uniforme)
     RAIO_DISCO: 0.6,         // disco medido = RAIO_DISCO × raio da bolha
     LIMIAR_BRANCO: 0.10,     // fração de tinta abaixo disto = bolha vazia
+    LIMIAR_SEGUNDA: 0.40,    // 'marcada' exige que a 2ª bolha esteja abaixo disto (senão: dúvida; uma dupla com uma bolha falhada não vira letra)
     LIMIAR_MARCA: 0.76,      // fração de tinta a partir da qual a bolha conta como pintada
     FOLGA: 0.25,             // diferença mínima entre a 1ª e a 2ª bolha para haver vencedora
     MARCA_RAZAO_MIN: 0.7, MARCA_RAZAO_MAX: 1.4,   // proporção da caixa da marca
@@ -278,7 +279,7 @@
     const marcadas = ord.filter(o => o.v >= C.LIMIAR_MARCA);
     if (v0 < C.LIMIAR_BRANCO) return { estado: "branco", confianca: Math.max(0, 1 - v0 / C.LIMIAR_BRANCO) };
     if (marcadas.length >= 2) return { estado: "dupla", letras: marcadas.map(o => o.letra).sort(), confianca: 0 };
-    if (marcadas.length === 1 && v0 - v1 >= C.FOLGA) return { estado: "marcada", letra: ord[0].letra, confianca: Math.min(1, v0 - v1) };
+    if (marcadas.length === 1 && v0 - v1 >= C.FOLGA && v1 < C.LIMIAR_SEGUNDA) return { estado: "marcada", letra: ord[0].letra, confianca: Math.min(1, v0 - v1) };
     return { estado: "duvida", letras: ord.filter(o => o.v >= C.LIMIAR_BRANCO).map(o => o.letra).sort(), confianca: 0 };
   }
 
