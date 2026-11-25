@@ -1,8 +1,8 @@
 """Monta um vídeo MJPEG (câmera FALSA do Chromium) a partir das fotos SINTÉTICAS (fictícias) de testes/sinteticos/.
 
-  python3 ferramentas/video_teste.py SAIDA.mjpeg --roteiro sequencia      # mesa vazia → cartão A → cartão B → mesa vazia
+  python3 ferramentas/video_teste.py SAIDA.mjpeg --roteiro sequencia      # mesa vazia → cartões A, B, C (sem sair da frente) → mesa vazia
   python3 ferramentas/video_teste.py SAIDA.mjpeg --roteiro mesa-vazia      # só mesa vazia
-Só Pillow. Quadros 1080×1920 (retrato, como o iPhone), 30 quadros/s, com tremor e ruído leves; a entrada de cada cartão
+Só Pillow. Quadros 1080×1080 (o que a câmera falsa entrega), cartão encaixado na moldura-guia, 30 quadros/s, com tremor e ruído leves; a entrada de cada cartão
 é um deslize lateral (as marcas se movem: o leitor não pode capturar nessa hora).
 """
 from __future__ import annotations
@@ -16,18 +16,23 @@ from PIL import Image, ImageChops, ImageFilter
 
 RAIZ = Path(__file__).resolve().parent.parent
 SINT = RAIZ / "testes" / "sinteticos"
-LARG, ALT, FPS = 1080, 1920, 30
+LARG, ALT, FPS = 1080, 1080, 30   # a câmera falsa do Chromium entrega 1080×1080 (recorte central) mesmo com arquivo 1080×1920
+CARTAO_PX = 1450.0   # largura do cartão nominal (sem inclinação) nas fotos sintéticas (sinteticos.fotografar: cw)
+PROP = 105 / 148.5   # proporção do cartão a6x4 = da moldura-guia do leitor
 
 
-def quadro_base(nome: str) -> Image.Image:
+def quadro_base(nome: str, dx: int = 0, dy: int = 0, gira180: bool = False) -> Image.Image:
+    """Enquadra a foto como o professor faria: o cartão nominal ocupa a MOLDURA-GUIA (90% da altura/largura, proporção do cartão),
+    com a foto centrada. Quadro LARG×ALT."""
     im = Image.open(SINT / nome).convert("RGB")
-    w, h = LARG, round(im.height * LARG / im.width)
-    im = im.resize((w, h), Image.LANCZOS)
-    # completa até 9:16 com a cor média das bordas (mesa)
-    borda = im.crop((0, 0, w, 20)).resize((1, 1), Image.BOX).getpixel((0, 0))
-    tela = Image.new("RGB", (LARG, ALT), borda)
-    tela.paste(im, (0, (ALT - h) // 2))
-    return tela
+    h_guia = 0.9 * ALT; w_guia = h_guia * PROP
+    if w_guia > 0.9 * LARG:
+        w_guia = 0.9 * LARG
+    esc = w_guia / CARTAO_PX
+    im = im.resize((round(im.width * esc), round(im.height * esc)), Image.LANCZOS)
+    x, y = (im.width - LARG) // 2 - dx, (im.height - ALT) // 2 - dy   # dx,dy: cartão fora do lugar (px do quadro)
+    q = im.crop((x, y, x + LARG, y + ALT))
+    return q.rotate(180) if gira180 else q
 
 
 def variantes(base: Image.Image, n: int, rnd: random.Random):
@@ -58,8 +63,8 @@ def deslize(a: Image.Image, b: Image.Image, passos: int):
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("saida")
-    ap.add_argument("--roteiro", choices=["sequencia", "mesa-vazia"], default="sequencia")
-    ap.add_argument("--a", default="01_base.jpg"); ap.add_argument("--b", default="05_perspectiva.jpg")
+    ap.add_argument("--roteiro", choices=["sequencia", "mesa-vazia", "extras"], default="sequencia")
+    ap.add_argument("--a", default="01_base.jpg"); ap.add_argument("--b", default="02_base.jpg"); ap.add_argument("--c", default="13_sombra.jpg")
     a = ap.parse_args()
     rnd = random.Random(7)
     mesa = quadro_base("23_negativo_sem_cartao.jpg")
@@ -67,9 +72,15 @@ def main() -> None:
     # (imagem, segundos)
     if a.roteiro == "mesa-vazia":
         partes = [(vazio, 8)]
+    elif a.roteiro == "extras":
+        # A fora do lugar (+4% da largura da moldura), B de cabeça para baixo, C MUITO fora da moldura (não pode ler)
+        ca = variantes(quadro_base(a.a, dx=28, dy=-20), 6, rnd)
+        cb = variantes(quadro_base(a.b, gira180=True), 6, rnd)
+        cc = variantes(quadro_base("03_base.jpg", dx=330, dy=0), 6, rnd)
+        partes = [(vazio, 2), (ca, 4), (cb, 4), (vazio, 2), (cc, 4), (vazio, 8)]
     else:
-        ca, cb = variantes(quadro_base(a.a), 6, rnd), variantes(quadro_base(a.b), 6, rnd)
-        partes = [(vazio, 3), (ca, 4), (cb, 4), (vazio, 8)]
+        ca, cb, cc = (variantes(quadro_base(n), 6, rnd) for n in (a.a, a.b, a.c))
+        partes = [(vazio, 3), (ca, 4), (cb, 4), (cc, 4), (vazio, 8)]
     quadros: list[bytes] = []
     for k, (vs, seg) in enumerate(partes):
         if k:

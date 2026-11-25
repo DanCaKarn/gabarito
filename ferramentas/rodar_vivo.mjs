@@ -17,6 +17,7 @@ const pega = (nome, def) => { const i = args.indexOf(nome); return i >= 0 ? args
 const esperado = (pega("--esperado", "") || "").split(",").filter(Boolean);
 const maxS = Number(pega("--max", "30"));
 const shot = pega("--screenshot", null);
+const trace = args.includes("--trace") ? (args.splice(args.indexOf("--trace"), 1), true) : false; let dicaAnt = "";
 const shotDica = pega("--shot-dica", null), shotDicaArq = pega("--shot-dica-arq", null);
 const video = resolve(args[0] || "");
 const url = pega("--url", "http://127.0.0.1:8000/leitor/index.html?perf=1");
@@ -43,10 +44,13 @@ try {
   await dorme(2500);   // polyfill do QR (jsDelivr) e moldes
   console.log("polyfill BarcodeDetector:", await ev('"BarcodeDetector" in self'));
   await ev('document.getElementById("ligar").click()');
+  const amostras = [], msAmostras = []; let tam = "?";
   const t0 = Date.now(); let confirmadas = 0, ultimaLeitura = 0, shotFeito = false;
   while ((Date.now() - t0) / 1000 < maxS) {
     await dorme(150);
     if (shotDica && shotDicaArq && !globalThis.__feito && (await ev('document.getElementById("dica").textContent')) === shotDica) { const s = await cdp("Page.captureScreenshot", { format: "png" }); writeFileSync(shotDicaArq, Buffer.from(s.result.data, "base64")); globalThis.__feito = true; }
+    if (trace) { const d = await ev('document.getElementById("dica").textContent'); if (d !== dicaAnt) { dicaAnt = d; console.log(`  [${((Date.now() - t0) / 1000).toFixed(1)}s] ${d}  ${await ev('JSON.stringify(Vivo.detalhe())')}`); } }
+    { const m = JSON.parse(await ev("JSON.stringify(Vivo.metricas())")); tam = m.video; if ((await ev("Vivo.estado().rodando")) && m.checagensPorSeg) { amostras.push(m.checagensPorSeg); msAmostras.push(m.msChecagem); } }
     const evs = JSON.parse(await ev("JSON.stringify(Vivo.eventos)") || "[]");
     const leituras = evs.filter((e) => e.tipo === "leitura");
     if (leituras.length > confirmadas) {
@@ -61,9 +65,12 @@ try {
   const estado = await ev("JSON.stringify(Vivo.estado())"), perf = await ev('document.getElementById("perf").textContent');
   const leituras = evs.filter((e) => e.tipo === "leitura");
   const cont = (t) => evs.filter((e) => e.tipo === t).length;
-  console.log(`\nleituras exibidas: ${leituras.length} (esperado ${esperado.length}) · falhas: ${cont("falha")} · repetidas ignoradas: ${cont("repetida")} · cartão saiu: ${cont("cartao-saiu")} · câmera morreu: ${cont("camera-morreu")}`);
+  const med = (a) => a.length ? a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)] : 0;
+  console.log(`\nvídeo entregue pela câmera: ${tam} · checagens/s (mediana ${med(amostras)}, máx ${Math.max(0, ...amostras)}) · ms/checagem (mediana ${med(msAmostras)})`);
+  console.log(`leituras exibidas: ${leituras.length} (esperado ${esperado.length}) · falhas: ${cont("falha")} · repetidas ignoradas: ${cont("repetida")} · cartão saiu: ${cont("cartao-saiu")} · câmera morreu: ${cont("camera-morreu")}`);
   const motivos = {}; for (const e of evs.filter((e) => e.tipo === "falha")) motivos[e.motivo] = (motivos[e.motivo] || 0) + 1;
   if (Object.keys(motivos).length) console.log("motivos das falhas:", JSON.stringify(motivos));
+  const ls = evs.filter((e) => e.tipo === "leitura"); if (ls.length) console.log("leitura: " + ls.map((e) => `QR ${e.tQR} ms (${e.estrategiaQR}), bolhas ${e.tBolhas} ms, total ${e.ms} ms`).join(" | "));
   console.log("desempenho na tela:", perf, "| estado:", estado);
   let erros = 0;
   if (leituras.length !== esperado.length) { erros++; console.log("ERRO: número de leituras diferente do esperado"); }

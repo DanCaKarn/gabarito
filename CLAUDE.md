@@ -48,11 +48,15 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
 ### Modo ao vivo (etapa 4)
 - `leitor/vivo.js` (câmera + laço), `resultado.js` (tela do resultado), `erro.js` (aviso de erro na tela, corta 6+ dígitos),
   `version.js` (APP_VERSAO/APP_DATA: SUBIR a cada mudança em leitor/; aparece no rodapé e no aviso de erro). Sem service worker.
-- Laço: a cada ~120 ms, quadro de ≤720 px → `OMR.detectarMarcas` (só as 4 marcas); ≥3 checagens estáveis (deslocamento <1,5% do lado)
-  → captura o quadro na resolução TOTAL → QR + `OMR.ler`. Constantes `VIVO_*` em `OMR.C`. Nenhum quadro é guardado/enviado.
+- Laço (v3): rAF a cada quadro NOVO de vídeo; só 4 recortes (32% da moldura-guia em volta de cada marca esperada), 96 px cada, num mosaico
+  com UM getImageData, buffers reaproveitados (`OMR.criarDetectorCantos`); se a checagem passar de 25 ms o laço pula quadros.
+  Estabilidade por TEMPO: marcas paradas (<1,5% do lado) por `VIVO_ESTAVEL_MS` = 300 ms → captura o quadro inteiro → QR + `OMR.ler`.
+  QR: aquecido ao abrir a página; lido num recorte em volta da posição prevista (homografia das marcas vivas), depois recorte 180°, depois quadro inteiro.
+  Constantes `VIVO_*`/`CANTO_*` em `OMR.C`. O cartão precisa estar encaixado na moldura (tolerância ~±16% da largura). Nenhum quadro é guardado/enviado.
 - Anti-repetição: após "Confirmar", mesmo código+matrícula só relê depois que as marcas somem por ≥1 s (ou "Ler de novo").
 - Tudo que roda na inicialização é declarado ANTES (lição da Caderneta). Câmera: liberar em visibilitychange/pagehide, religar ao voltar.
 - Câmera ao vivo exige HTTPS: `./servir_leitor.sh` agora serve por HTTPS (autoassinado, efêmero) na porta 8443; `HTTPS=0` volta ao HTTP (só foto).
 - Teste ao vivo (câmera falsa do Chromium): `uv run sinteticos.py` (gera os JPGs, que são ignorados no git), depois
-  `python3 ferramentas/video_teste.py /tmp/seq.mjpeg` e `node ferramentas/rodar_vivo.mjs /tmp/seq.mjpeg --esperado 01_base,05_perspectiva`
+  `python3 ferramentas/video_teste.py /tmp/seq.mjpeg` e `node ferramentas/rodar_vivo.mjs /tmp/seq.mjpeg --esperado 01_base,02_base,13_sombra`
+  (`--roteiro extras`: cartão fora do lugar, de cabeça para baixo e fora da moldura; `--trace` mostra as dicas ao longo do tempo)
   (e `--roteiro mesa-vazia` + sem `--esperado`: não pode ler nada). Os vídeos ficam fora do repositório.
