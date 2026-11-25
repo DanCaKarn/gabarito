@@ -45,9 +45,6 @@
   #perf{position:absolute;left:6px;top:6px;font:11px ui-monospace,monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:6px}
   .barra{display:flex;gap:8px;justify-content:space-between;align-items:center;margin:8px 0;flex-wrap:wrap}
   .mini{padding:8px 12px;font-size:.9rem}
-  #debug{display:flex;gap:10px;align-items:flex-start;margin:6px 0}
-  #mosaicoDbg{width:176px;height:176px;image-rendering:pixelated;border:1px solid var(--bd);background:#000;flex:none}
-  #debugTxt{margin:0;font:11px/1.35 ui-monospace,Menlo,monospace;white-space:pre-wrap;color:var(--mut)}
   footer{color:var(--mut);font-size:.78rem;text-align:center;margin:18px 0 0}
   [hidden]{display:none!important}
 </style>
@@ -79,7 +76,6 @@
   <!-- ao vivo -->
   <section id="telaVivo" hidden>
     <div id="palco"><video id="video" playsinline muted autoplay></video><canvas id="guia"></canvas><div id="perf" hidden></div><div id="dica">Aponte para o cartão</div></div>
-    <div id="debug" hidden><canvas id="mosaicoDbg" width="2" height="2"></canvas><pre id="debugTxt"></pre></div>
     <div class="barra">
       <span>
         <button class="btn mini" id="somBtn" type="button" aria-label="Som">🔊</button>

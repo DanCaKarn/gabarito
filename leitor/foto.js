@@ -30,48 +30,12 @@ const Foto = (() => {
     return { cQR, cOMR };
   }
 
-  // Quadro ao vivo: UM canvas reaproveitado com o quadro na resolução TOTAL do vídeo (`cheio`) + a cópia de ≤1600 px para a leitura.
-  // A cópia de 2400 px do QR só é feita se o recorte não bastar (veja lerQRAoVivo).
-  const cvCheio = document.createElement("canvas"), cvRecorte = document.createElement("canvas");
+  // Quadro ao vivo → as mesmas duas versões (2400 px p/ QR, 1600 px p/ leitura), a partir do quadro na resolução TOTAL do vídeo.
   function deVideo(video) {
-    cvCheio.width = video.videoWidth; cvCheio.height = video.videoHeight;
-    cvCheio.getContext("2d").drawImage(video, 0, 0);
-    return { cheio: cvCheio, cOMR: desenhar(cvCheio, OMR.C.LADO_MAX), largura: cvCheio.width, altura: cvCheio.height };
-  }
-  function soltarQuadro() { cvCheio.width = 1; cvCheio.height = 1; cvRecorte.width = 1; cvRecorte.height = 1; }   // não deixa imagem na memória
-
-  // Aquece o detector (o polyfill carrega o WebAssembly na 1ª detecção): uma detecção numa imagem branca.
-  async function aquecerQR() {
-    try {
-      const c = document.createElement("canvas"); c.width = 64; c.height = 64;
-      const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 64, 64);
-      await (await detectorQR()).detect(c);
-      return true;
-    } catch (e) { return false; }
-  }
-
-  /* QR ao vivo: tenta recortes em resolução nativa em volta da posição prevista pelo molde (via homografia das 4 marcas vivas),
-   * depois o espelho 180° (cartão de cabeça para baixo), depois o quadro inteiro (≤2400 px).
-   * caixas: [{x,y,w,h,nome}] em px de `cheio`. Devolve {…parseQR, texto, cornerPoints (espaço do cOMR), estrategia} | {invalido} | null. */
-  async function lerQRAoVivo(cheio, cOMR, caixas) {
-    const det = await detectorQR(), f = cOMR.width / cheio.width;
-    let invalido = null;
-    for (const cx of caixas) {
-      const w = Math.round(Math.min(Math.max(cx.w * 2, 480), OMR.C.LADO_MAX_QR)), h = Math.max(16, Math.round(cx.h * w / cx.w));
-      cvRecorte.width = w; cvRecorte.height = h;
-      cvRecorte.getContext("2d").drawImage(cheio, cx.x, cx.y, cx.w, cx.h, 0, 0, w, h);
-      for (const a of await det.detect(cvRecorte)) {
-        const p = OMR.parseQR(a.rawValue);
-        if (!p) { invalido = { invalido: true, texto: "(QR que não é do Gabarito)" }; continue; }
-        const pts = a.cornerPoints.map(q => ({ x: (cx.x + q.x * cx.w / w) * f, y: (cx.y + q.y * cx.h / h) * f }));
-        return Object.assign({ texto: a.rawValue, cornerPoints: pts, estrategia: cx.nome }, p);
-      }
-    }
-    if (invalido) return invalido;
-    const cQR = desenhar(cheio, OMR.C.LADO_MAX_QR);
-    const r = await lerQR(cQR, cOMR);
-    if (r && !r.invalido) r.estrategia = "quadro inteiro";
-    return r;
+    const cheio = document.createElement("canvas");
+    cheio.width = video.videoWidth; cheio.height = video.videoHeight;
+    cheio.getContext("2d").drawImage(video, 0, 0);
+    return { cQR: desenhar(cheio, OMR.C.LADO_MAX_QR), cOMR: desenhar(cheio, OMR.C.LADO_MAX), largura: cheio.width, altura: cheio.height };
   }
 
   const imageData = (c) => c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
@@ -124,5 +88,5 @@ const Foto = (() => {
     return `dúvida (${(r.letras || []).join(", ") || "—"})`;
   }
 
-  return { carregar, deVideo, soltarQuadro, aquecerQR, lerQRAoVivo, imageData, lerQR, moldePorCodigo, listaMoldes, sobrepor, descricao };
+  return { carregar, deVideo, imageData, lerQR, moldePorCodigo, listaMoldes, sobrepor, descricao };
 })();

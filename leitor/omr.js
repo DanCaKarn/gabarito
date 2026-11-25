@@ -17,7 +17,6 @@
     DIF_MIN: 18,             // ... e pelo menos DIF_MIN níveis abaixo da média (ignora ruído em fundo uniforme)
     RAIO_DISCO: 0.6,         // disco medido = RAIO_DISCO × raio da bolha
     LIMIAR_BRANCO: 0.10,     // fração de tinta abaixo disto = bolha vazia
-    LIMIAR_SEGUNDA: 0.40,    // 'marcada' exige que a 2ª bolha esteja abaixo disto (senão: dúvida; uma dupla com uma bolha falhada não vira letra)
     LIMIAR_MARCA: 0.76,      // fração de tinta a partir da qual a bolha conta como pintada
     FOLGA: 0.25,             // diferença mínima entre a 1ª e a 2ª bolha para haver vencedora
     MARCA_RAZAO_MIN: 0.7, MARCA_RAZAO_MAX: 1.4,   // proporção da caixa da marca
@@ -34,14 +33,7 @@
     VIVO_AREA_MAX: 0.85,     // acima disto (ou marca encostada na borda), "Afaste"
     VIVO_BORDA: 0.012,       // marca a menos desta fração da borda do quadro = cartão cortado
     VIVO_DESLOC: 0.015,      // deslocamento máximo entre checagens, como fração do lado do quadrilátero
-    VIVO_ESTAVEL_MS: 300,    // marcas paradas por tanto tempo antes de capturar o quadro inteiro
-    CANTO_T: 112,            // px: lado de cada recorte de canto (marca de 6 mm ≈ 13 px nele)
-    CANTO_LADO: 0.48,        // lado do recorte / largura da moldura-guia (folga para cartão fora do lugar, menor ou inclinado)
-    CANTO_JANELA: 0.6,       // janela do limiar adaptativo / T (≥ 3× a marca)
-    CANTO_PREENCH_MIN: 0.8,  // preenchimento mínimo da marca de canto (octógono): a marca é um quadrado maciço; logos/círculos/texto ficam abaixo
-    CANTO_ESCURO: 0.5,       // média de cinza da marca ≤ isto × média local (preta maciça; logo azul/texto não passam)
-    CANTO_TAM_MIN: 0.55, CANTO_TAM_MAX: 1.8,   // lado da marca achada / lado esperado
-    VIVO_TAM_BOM_MIN: 0.7, VIVO_TAM_BOM_MAX: 1.35,   // fora disto: "Aproxime" / "Afaste"
+    VIVO_ESTAVEIS: 3,        // checagens seguidas, estáveis, antes de capturar o quadro inteiro
   };
 
   const agora = typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
@@ -286,7 +278,7 @@
     const marcadas = ord.filter(o => o.v >= C.LIMIAR_MARCA);
     if (v0 < C.LIMIAR_BRANCO) return { estado: "branco", confianca: Math.max(0, 1 - v0 / C.LIMIAR_BRANCO) };
     if (marcadas.length >= 2) return { estado: "dupla", letras: marcadas.map(o => o.letra).sort(), confianca: 0 };
-    if (marcadas.length === 1 && v0 - v1 >= C.FOLGA && v1 < C.LIMIAR_SEGUNDA) return { estado: "marcada", letra: ord[0].letra, confianca: Math.min(1, v0 - v1) };
+    if (marcadas.length === 1 && v0 - v1 >= C.FOLGA) return { estado: "marcada", letra: ord[0].letra, confianca: Math.min(1, v0 - v1) };
     return { estado: "duvida", letras: ord.filter(o => o.v >= C.LIMIAR_BRANCO).map(o => o.letra).sort(), confianca: 0 };
   }
 
@@ -342,124 +334,6 @@
       pior = Math.max(pior, m);
     }
     return pior / b.ladoQuad;
-  }
-
-
-  // ===================== modo ao vivo (v2): só os 4 cantos da moldura-guia =====================
-  /* moldura(vw, vh, molde): retângulo da moldura-guia no quadro de vídeo (px): 90% da altura (ou da largura), proporção do cartão. */
-  function moldura(vw, vh, molde) {
-    const prop = molde.cartao.largura / molde.cartao.altura;
-    let h = vh * 0.9, w = h * prop;
-    if (w > vw * 0.9) { w = vw * 0.9; h = w / prop; }
-    return { x: (vw - w) / 2, y: (vh - h) / 2, w, h };
-  }
-
-  /* regioesCantos(vw, vh, molde): para cada marca do molde [TL,TR,BL,BR], o recorte quadrado (px do vídeo) centrado na posição
-   * esperada dentro da moldura (deslocado, não encolhido, se sair do quadro) e o centro esperado (ex,ey). */
-  function regioesCantos(vw, vh, molde) {
-    const m = moldura(vw, vh, molde), s = C.CANTO_LADO * m.w, kx = m.w / molde.cartao.largura, ky = m.h / molde.cartao.altura;
-    return molde.marcas.map(mk => {
-      const ex = m.x + mk.cx * kx, ey = m.y + mk.cy * ky;
-      return { sx: Math.min(Math.max(0, ex - s / 2), vw - s), sy: Math.min(Math.max(0, ey - s / 2), vh - s), s, ex, ey };
-    });
-  }
-
-  /* criarDetectorCantos(): aloca UMA vez os buffers; `analisar(img, regs, molde)` não aloca nada.
-   *   img  : ImageData 2T×2T (mosaico: recorte k em (k%2·T, (k>>1)·T)), recortes na ordem do molde [TL,TR,BL,BR]
-   *   regs : regioesCantos(...)
-   * Devolve (o MESMO objeto a cada chamada): {achou, ok, dica, cantos[4]:{achada,cx,cy,lado,razao}, ladoQuad, razaoMedia}
-   * com cx,cy em px do quadro de vídeo. dica: "aponte" | "encaixe" | "reto" | "aproxime" | "afaste" | null. */
-  function criarDetectorCantos() {
-    const T = C.CANTO_T, N = T * T, W1 = T + 1, T2 = 2 * T;
-    const gray = new Uint8Array(N), I = new Uint32Array(W1 * W1), ink = new Uint8Array(N), vis = new Uint8Array(N), pilha = new Int32Array(N);
-    const cc = { x0: 0, y0: 0, x1: 0, y1: 0, n: 0, dmin: 0, dmax: 0, emin: 0, emax: 0 };   // componente em análise
-    const saida = { achou: 0, ok: false, dica: "aponte", cantos: [0, 1, 2, 3].map(() => ({ achada: false, cx: 0, cy: 0, lado: 0, razao: 0, rej: new Int32Array(5) })), ladoQuad: 0, razaoMedia: 0 };
-    const hw = Math.max(2, Math.round(C.CANTO_JANELA * T / 2));
-
-    function canto(img, k, ladoEsp, reg, out) {
-      const d = img.data, ox = (k & 1) * T, oy = (k >> 1) * T;
-      for (let y = 0; y < T; y++) { let o = ((oy + y) * T2 + ox) * 4; for (let x = 0; x < T; x++, o += 4) gray[y * T + x] = d[o]; }   // canal vermelho
-      for (let x = 0; x <= T; x++) I[x] = 0;
-      for (let y = 0; y < T; y++) {
-        let lin = 0; I[(y + 1) * W1] = 0;
-        for (let x = 0; x < T; x++) { lin += gray[y * T + x]; I[(y + 1) * W1 + x + 1] = I[y * W1 + x + 1] + lin; }
-      }
-      for (let y = 0; y < T; y++) {
-        const y0 = Math.max(0, y - hw), y1 = Math.min(T - 1, y + hw);
-        for (let x = 0; x < T; x++) {
-          const x0 = Math.max(0, x - hw), x1 = Math.min(T - 1, x + hw);
-          const media = (I[(y1 + 1) * W1 + x1 + 1] - I[y0 * W1 + x1 + 1] - I[(y1 + 1) * W1 + x0] + I[y0 * W1 + x0]) / ((x1 - x0 + 1) * (y1 - y0 + 1));
-          const v = gray[y * T + x];
-          ink[y * T + x] = (v < media * (1 - C.DESCONTO) && media - v >= C.DIF_MIN) ? 1 : 0;
-        }
-      }
-      vis.fill(0);
-      let melhor = -Infinity; out.achada = false; out.rej.fill(0);   // rej: [borda, razão, tamanho, preench., escuridão]
-      const ecx = (reg.ex - reg.sx) / reg.s * T, ecy = (reg.ey - reg.sy) / reg.s * T;   // onde a marca DEVERIA estar neste recorte (o recorte pode estar deslocado pela borda do quadro)
-      for (let i0 = 0; i0 < N; i0++) {
-        if (!ink[i0] || vis[i0]) continue;
-        let sp = 0, n = 0, sx = 0, sy = 0, sg = 0, x0 = T, x1 = -1, y0 = T, y1 = -1, dmin = 1e9, dmax = -1e9, emin = 1e9, emax = -1e9;
-        pilha[sp++] = i0; vis[i0] = 1;
-        while (sp) {
-          const i = pilha[--sp], y = (i / T) | 0, x = i - y * T;
-          n++; sx += x; sy += y; sg += gray[i];
-          if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-          const dd = x + y, ee = x - y;
-          if (dd < dmin) dmin = dd; if (dd > dmax) dmax = dd; if (ee < emin) emin = ee; if (ee > emax) emax = ee;
-          if (x > 0 && ink[i - 1] && !vis[i - 1]) { vis[i - 1] = 1; pilha[sp++] = i - 1; }
-          if (x < T - 1 && ink[i + 1] && !vis[i + 1]) { vis[i + 1] = 1; pilha[sp++] = i + 1; }
-          if (y > 0 && ink[i - T] && !vis[i - T]) { vis[i - T] = 1; pilha[sp++] = i - T; }
-          if (y < T - 1 && ink[i + T] && !vis[i + T]) { vis[i + T] = 1; pilha[sp++] = i + T; }
-        }
-        if (x0 === 0 || y0 === 0 || x1 === T - 1 || y1 === T - 1) { out.rej[0]++; continue; }   // encosta na borda do recorte: não é a marca inteira
-        const bw = x1 - x0 + 1, bh = y1 - y0 + 1, razaoCaixa = bw / bh, lado = Math.sqrt(n);
-        if (razaoCaixa < C.MARCA_RAZAO_MIN || razaoCaixa > C.MARCA_RAZAO_MAX) { if (n >= 6) out.rej[1]++; continue; }
-        if (lado < C.CANTO_TAM_MIN * ladoEsp || lado > C.CANTO_TAM_MAX * ladoEsp) { if (n >= 6) out.rej[2]++; continue; }
-        cc.x0 = x0; cc.y0 = y0; cc.x1 = x1; cc.y1 = y1; cc.n = n; cc.dmin = dmin; cc.dmax = dmax; cc.emin = emin; cc.emax = emax;
-        const fill = preenchimento(cc);
-        if (fill < C.CANTO_PREENCH_MIN) { out.rej[3]++; continue; }
-        const cx = sx / n, cy = sy / n;
-        // escuridão: a marca é preta maciça (média do recorte da componente ≪ média local); logos azuis/texto são mais claros
-        const ix = Math.round(cx), iy = Math.round(cy), a0 = Math.max(0, ix - hw), a1 = Math.min(T - 1, ix + hw), b0 = Math.max(0, iy - hw), b1 = Math.min(T - 1, iy + hw);
-        const media = (I[(b1 + 1) * W1 + a1 + 1] - I[b0 * W1 + a1 + 1] - I[(b1 + 1) * W1 + a0] + I[b0 * W1 + a0]) / ((a1 - a0 + 1) * (b1 - b0 + 1));
-        if (sg / n > C.CANTO_ESCURO * media) { out.rej[4]++; continue; }
-        // escolhe a mais maciça (preenchimento alto), com leve preferência pela mais perto do centro esperado (o cartão pode estar deslocado)
-        const caixa = n / (bw * bh);   // quadrado ≈ 1 (círculo ≈ 0,79): ajuda a separar logo/bolinha preta da marca
-        const pont = fill + 0.3 * caixa - 0.5 * Math.hypot(cx - ecx, cy - ecy) / (T / 2);
-        if (pont > melhor) {
-          melhor = pont; out.achada = true; out.razao = lado / ladoEsp;
-          out.cx = reg.sx + (cx + 0.5) / T * reg.s; out.cy = reg.sy + (cy + 0.5) / T * reg.s; out.lado = lado / T * reg.s;
-        }
-      }
-    }
-
-    function analisar(img, regs, molde) {
-      const ladoEsp = molde.marcas[0].tamanho * T / (C.CANTO_LADO * molde.cartao.largura);
-      let n = 0, soma = 0;
-      for (let k = 0; k < 4; k++) { canto(img, k, ladoEsp, regs[k], saida.cantos[k]); if (saida.cantos[k].achada) { n++; soma += saida.cantos[k].razao; } }
-      saida.achou = n; saida.ok = false; saida.razaoMedia = n ? soma / n : 0; saida.ladoQuad = 0;
-      if (n === 0) { saida.dica = "aponte"; return saida; }
-      if (n < 4) { saida.dica = "encaixe"; return saida; }
-      const [a, b, c, d] = saida.cantos;   // TL, TR, BL, BR
-      const D = (p, q) => Math.hypot(p.cx - q.cx, p.cy - q.cy);
-      const larg = (D(a, b) + D(c, d)) / 2, alt = (D(a, c) + D(b, d)) / 2;
-      saida.ladoQuad = (D(a, b) + D(c, d) + D(a, c) + D(b, d)) / 4;
-      const mm = molde.marcas, esperado = Math.hypot(mm[1].cx - mm[0].cx, mm[1].cy - mm[0].cy) / Math.hypot(mm[2].cx - mm[0].cx, mm[2].cy - mm[0].cy);
-      if (Math.abs(larg / alt / esperado - 1) > C.TOL_PROPORCAO) { saida.dica = "reto"; return saida; }
-      if (saida.razaoMedia < C.VIVO_TAM_BOM_MIN) { saida.dica = "aproxime"; return saida; }
-      if (saida.razaoMedia > C.VIVO_TAM_BOM_MAX) { saida.dica = "afaste"; return saida; }
-      saida.ok = true; saida.dica = null;
-      return saida;
-    }
-    return { analisar, saida, T, tamanhoMosaico: 2 * T };
-  }
-
-  // Posições (8 números) das 4 marcas achadas, para comparar com a checagem seguinte sem alocar.
-  function copiarPosicoes(det, dst) { for (let k = 0; k < 4; k++) { dst[2 * k] = det.cantos[k].cx; dst[2 * k + 1] = det.cantos[k].cy; } }
-  function deslocamentoPos(ref, det) {   // maior deslocamento de um canto / lado do quadrilátero
-    let m = 0;
-    for (let k = 0; k < 4; k++) m = Math.max(m, Math.hypot(ref[2 * k] - det.cantos[k].cx, ref[2 * k + 1] - det.cantos[k].cy));
-    return m / det.ladoQuad;
   }
 
   // ===================== 8. leitura completa =====================
@@ -570,6 +444,5 @@
   }
 
   return { C, ErroLeitura, cinzaVermelho, suavizar3, integral, limiarAdaptativo, componentes, candidatosMarca, escolherMarcas,
-    homografia, projetar, pxPorMm, medirBolhas, decidirQuestao, parseQR, escalarPontos, ler, avaliar, detectarMarcas, deslocamentoRel,
-    moldura, regioesCantos, criarDetectorCantos, copiarPosicoes, deslocamentoPos };
+    homografia, projetar, pxPorMm, medirBolhas, decidirQuestao, parseQR, escalarPontos, ler, avaliar, detectarMarcas, deslocamentoRel };
 });
