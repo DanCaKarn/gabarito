@@ -17,6 +17,7 @@
     DIF_MIN: 18,             // ... e pelo menos DIF_MIN níveis abaixo da média (ignora ruído em fundo uniforme)
     RAIO_DISCO: 0.6,         // disco medido = RAIO_DISCO × raio da bolha
     LIMIAR_BRANCO: 0.10,     // fração de tinta abaixo disto = bolha vazia
+    LIMIAR_SEGUNDA: 0.40,    // 'marcada' exige que a 2ª bolha esteja abaixo disto (senão: dúvida; uma dupla com uma bolha falhada não vira letra)
     LIMIAR_MARCA: 0.76,      // fração de tinta a partir da qual a bolha conta como pintada
     FOLGA: 0.25,             // diferença mínima entre a 1ª e a 2ª bolha para haver vencedora
     MARCA_RAZAO_MIN: 0.7, MARCA_RAZAO_MAX: 1.4,   // proporção da caixa da marca
@@ -34,12 +35,13 @@
     VIVO_BORDA: 0.012,       // marca a menos desta fração da borda do quadro = cartão cortado
     VIVO_DESLOC: 0.015,      // deslocamento máximo entre checagens, como fração do lado do quadrilátero
     VIVO_ESTAVEL_MS: 300,    // marcas paradas por tanto tempo antes de capturar o quadro inteiro
-    CANTO_T: 96,             // px: lado de cada recorte de canto (marca de 6 mm ≈ 18 px nele)
-    CANTO_LADO: 0.32,        // lado do recorte / largura da moldura-guia
+    CANTO_T: 112,            // px: lado de cada recorte de canto (marca de 6 mm ≈ 13 px nele)
+    CANTO_LADO: 0.48,        // lado do recorte / largura da moldura-guia (folga para cartão fora do lugar, menor ou inclinado)
     CANTO_JANELA: 0.6,       // janela do limiar adaptativo / T (≥ 3× a marca)
+    CANTO_PREENCH_MIN: 0.8,  // preenchimento mínimo da marca de canto (octógono): a marca é um quadrado maciço; logos/círculos/texto ficam abaixo
     CANTO_ESCURO: 0.5,       // média de cinza da marca ≤ isto × média local (preta maciça; logo azul/texto não passam)
-    CANTO_TAM_MIN: 0.7, CANTO_TAM_MAX: 1.8,   // lado da marca achada / lado esperado
-    VIVO_TAM_BOM_MIN: 0.8, VIVO_TAM_BOM_MAX: 1.35,   // fora disto: "Aproxime" / "Afaste"
+    CANTO_TAM_MIN: 0.55, CANTO_TAM_MAX: 1.8,   // lado da marca achada / lado esperado
+    VIVO_TAM_BOM_MIN: 0.7, VIVO_TAM_BOM_MAX: 1.35,   // fora disto: "Aproxime" / "Afaste"
   };
 
   const agora = typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
@@ -284,7 +286,7 @@
     const marcadas = ord.filter(o => o.v >= C.LIMIAR_MARCA);
     if (v0 < C.LIMIAR_BRANCO) return { estado: "branco", confianca: Math.max(0, 1 - v0 / C.LIMIAR_BRANCO) };
     if (marcadas.length >= 2) return { estado: "dupla", letras: marcadas.map(o => o.letra).sort(), confianca: 0 };
-    if (marcadas.length === 1 && v0 - v1 >= C.FOLGA) return { estado: "marcada", letra: ord[0].letra, confianca: Math.min(1, v0 - v1) };
+    if (marcadas.length === 1 && v0 - v1 >= C.FOLGA && v1 < C.LIMIAR_SEGUNDA) return { estado: "marcada", letra: ord[0].letra, confianca: Math.min(1, v0 - v1) };
     return { estado: "duvida", letras: ord.filter(o => o.v >= C.LIMIAR_BRANCO).map(o => o.letra).sort(), confianca: 0 };
   }
 
@@ -371,7 +373,7 @@
     const T = C.CANTO_T, N = T * T, W1 = T + 1, T2 = 2 * T;
     const gray = new Uint8Array(N), I = new Uint32Array(W1 * W1), ink = new Uint8Array(N), vis = new Uint8Array(N), pilha = new Int32Array(N);
     const cc = { x0: 0, y0: 0, x1: 0, y1: 0, n: 0, dmin: 0, dmax: 0, emin: 0, emax: 0 };   // componente em análise
-    const saida = { achou: 0, ok: false, dica: "aponte", cantos: [0, 1, 2, 3].map(() => ({ achada: false, cx: 0, cy: 0, lado: 0, razao: 0 })), ladoQuad: 0, razaoMedia: 0 };
+    const saida = { achou: 0, ok: false, dica: "aponte", cantos: [0, 1, 2, 3].map(() => ({ achada: false, cx: 0, cy: 0, lado: 0, razao: 0, rej: new Int32Array(5) })), ladoQuad: 0, razaoMedia: 0 };
     const hw = Math.max(2, Math.round(C.CANTO_JANELA * T / 2));
 
     function canto(img, k, ladoEsp, reg, out) {
@@ -392,8 +394,8 @@
         }
       }
       vis.fill(0);
-      let melhor = -Infinity; out.achada = false;
-      const c0 = (T - 1) / 2;
+      let melhor = -Infinity; out.achada = false; out.rej.fill(0);   // rej: [borda, razão, tamanho, preench., escuridão]
+      const ecx = (reg.ex - reg.sx) / reg.s * T, ecy = (reg.ey - reg.sy) / reg.s * T;   // onde a marca DEVERIA estar neste recorte (o recorte pode estar deslocado pela borda do quadro)
       for (let i0 = 0; i0 < N; i0++) {
         if (!ink[i0] || vis[i0]) continue;
         let sp = 0, n = 0, sx = 0, sy = 0, sg = 0, x0 = T, x1 = -1, y0 = T, y1 = -1, dmin = 1e9, dmax = -1e9, emin = 1e9, emax = -1e9;
@@ -409,19 +411,21 @@
           if (y > 0 && ink[i - T] && !vis[i - T]) { vis[i - T] = 1; pilha[sp++] = i - T; }
           if (y < T - 1 && ink[i + T] && !vis[i + T]) { vis[i + T] = 1; pilha[sp++] = i + T; }
         }
-        if (x0 === 0 || y0 === 0 || x1 === T - 1 || y1 === T - 1) continue;   // encosta na borda do recorte: não é a marca inteira
+        if (x0 === 0 || y0 === 0 || x1 === T - 1 || y1 === T - 1) { out.rej[0]++; continue; }   // encosta na borda do recorte: não é a marca inteira
         const bw = x1 - x0 + 1, bh = y1 - y0 + 1, razaoCaixa = bw / bh, lado = Math.sqrt(n);
-        if (razaoCaixa < C.MARCA_RAZAO_MIN || razaoCaixa > C.MARCA_RAZAO_MAX) continue;
-        if (lado < C.CANTO_TAM_MIN * ladoEsp || lado > C.CANTO_TAM_MAX * ladoEsp) continue;
+        if (razaoCaixa < C.MARCA_RAZAO_MIN || razaoCaixa > C.MARCA_RAZAO_MAX) { if (n >= 6) out.rej[1]++; continue; }
+        if (lado < C.CANTO_TAM_MIN * ladoEsp || lado > C.CANTO_TAM_MAX * ladoEsp) { if (n >= 6) out.rej[2]++; continue; }
         cc.x0 = x0; cc.y0 = y0; cc.x1 = x1; cc.y1 = y1; cc.n = n; cc.dmin = dmin; cc.dmax = dmax; cc.emin = emin; cc.emax = emax;
-        if (preenchimento(cc) < C.MARCA_PREENCH_MIN) continue;
+        const fill = preenchimento(cc);
+        if (fill < C.CANTO_PREENCH_MIN) { out.rej[3]++; continue; }
         const cx = sx / n, cy = sy / n;
         // escuridão: a marca é preta maciça (média do recorte da componente ≪ média local); logos azuis/texto são mais claros
         const ix = Math.round(cx), iy = Math.round(cy), a0 = Math.max(0, ix - hw), a1 = Math.min(T - 1, ix + hw), b0 = Math.max(0, iy - hw), b1 = Math.min(T - 1, iy + hw);
         const media = (I[(b1 + 1) * W1 + a1 + 1] - I[b0 * W1 + a1 + 1] - I[(b1 + 1) * W1 + a0] + I[b0 * W1 + a0]) / ((a1 - a0 + 1) * (b1 - b0 + 1));
-        if (sg / n > C.CANTO_ESCURO * media) continue;
+        if (sg / n > C.CANTO_ESCURO * media) { out.rej[4]++; continue; }
         // escolhe a mais maciça (preenchimento alto), com leve preferência pela mais perto do centro esperado (o cartão pode estar deslocado)
-        const pont = preenchimento(cc) - 0.25 * Math.hypot(cx - c0, cy - c0) / (T / 2);
+        const caixa = n / (bw * bh);   // quadrado ≈ 1 (círculo ≈ 0,79): ajuda a separar logo/bolinha preta da marca
+        const pont = fill + 0.3 * caixa - 0.5 * Math.hypot(cx - ecx, cy - ecy) / (T / 2);
         if (pont > melhor) {
           melhor = pont; out.achada = true; out.razao = lado / ladoEsp;
           out.cx = reg.sx + (cx + 0.5) / T * reg.s; out.cy = reg.sy + (cy + 0.5) / T * reg.s; out.lado = lado / T * reg.s;

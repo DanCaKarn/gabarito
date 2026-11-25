@@ -48,8 +48,8 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
 ### Modo ao vivo (etapa 4)
 - `leitor/vivo.js` (câmera + laço), `resultado.js` (tela do resultado), `erro.js` (aviso de erro na tela, corta 6+ dígitos),
   `version.js` (APP_VERSAO/APP_DATA: SUBIR a cada mudança em leitor/; aparece no rodapé e no aviso de erro). Sem service worker.
-- Laço (v3): rAF a cada quadro NOVO de vídeo; só 4 recortes (32% da moldura-guia em volta de cada marca esperada), 96 px cada, num mosaico
-  com UM getImageData, buffers reaproveitados (`OMR.criarDetectorCantos`); se a checagem passar de 25 ms o laço pula quadros.
+- Laço (v3): rAF a cada quadro NOVO de vídeo; só 4 recortes (48% da moldura-guia em volta de cada marca esperada), 112 px cada, num mosaico
+  com UM getImageData , buffers reaproveitados (`OMR.criarDetectorCantos`); se a checagem passar de 25 ms o laço pula quadros.
   Estabilidade por TEMPO: marcas paradas (<1,5% do lado) por `VIVO_ESTAVEL_MS` = 300 ms → captura o quadro inteiro → QR + `OMR.ler`.
   QR: aquecido ao abrir a página; lido num recorte em volta da posição prevista (homografia das marcas vivas), depois recorte 180°, depois quadro inteiro.
   Constantes `VIVO_*`/`CANTO_*` em `OMR.C`. O cartão precisa estar encaixado na moldura (tolerância ~±16% da largura). Nenhum quadro é guardado/enviado.
@@ -60,3 +60,9 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
   `python3 ferramentas/video_teste.py /tmp/seq.mjpeg` e `node ferramentas/rodar_vivo.mjs /tmp/seq.mjpeg --esperado 01_base,02_base,13_sombra`
   (`--roteiro extras`: cartão fora do lugar, de cabeça para baixo e fora da moldura; `--trace` mostra as dicas ao longo do tempo)
   (e `--roteiro mesa-vazia` + sem `--esperado`: não pode ler nada). Os vídeos ficam fora do repositório.
+- Detecção dos cantos (v4): a pontuação do candidato usa a posição ESPERADA DENTRO do recorte (o recorte é deslocado, não encolhido, quando
+  sai do quadro: o centro do recorte NÃO é a marca), preenchimento ≥ 0,8, "caixa cheia" (quadrado ≈ 1; logo/círculo ≈ 0,79) e escuridão.
+  Antes da leitura ser aceita, as marcas de `OMR.ler` têm de coincidir com as do laço (quadro mexendo = recusa).
+- `?debug=1`: mosaico dos 4 recortes + motivo de cada canto falhar (+ tamanhos de vídeo/palco/tela); `?perf=1`: checagens/s.
+- Teste com tamanhos de vídeo e tela de celular: `video_teste.py --tam 1080x1920` + `rodar_vivo.mjs --gum livre --viewport 390x844x3`.
+- `LIMIAR_SEGUNDA` (0,40): 'marcada' exige a 2ª bolha abaixo disto; uma dupla com uma bolha falhada vira dúvida, nunca letra.

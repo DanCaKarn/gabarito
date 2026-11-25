@@ -28,7 +28,7 @@ const Vivo = (() => {
   const refPos = new Float64Array(8);
   let somOn = true, actx = null, hapticLabel = null, torchOn = false;
   let perfOn = false; const marcasDeTempo = []; let tLeitura = null, tQR = null, tBolhas = null, estrategiaQR = "";
-  let ultimaDet = null;
+  let ultimaDet = null, debug = false, dbgCtx = null, dbgUltimo = 0;
   let mosaico = null, mctx = null, detector = null, regs = null, regsChave = "", atual = null;
 
   const agora = () => performance.now();
@@ -174,6 +174,7 @@ const Vivo = (() => {
     marcasDeTempo.push(t); while (marcasDeTempo.length && t - marcasDeTempo[0] > 1000) marcasDeTempo.shift();
     desenharGuia(det);
     atualizarPerf();
+    if (debug) desenharDebug(img, det, t);
     if (det.achou <= 1) {   // cartão fora da imagem
       refDesde = 0; tentandoDesde = 0;
       if (!semMarcasDesde) semMarcasDesde = t;
@@ -229,6 +230,11 @@ const Vivo = (() => {
         if (!res.ok) falha = res.erro;
         else if ((res.avisos || []).some((a) => /Orientação duvidosa/.test(a))) falha = "Orientação duvidosa: segure firme e tente de novo.";
       }
+      if (!falha) {   // as marcas que a leitura completa achou têm de coincidir com as que o laço viu (quadro mexendo/misturado = recusa)
+        const f = quadro.cOMR.width / quadro.largura, tol = 0.06 * det.ladoQuad * f;
+        const coincide = det.cantos.every((c) => res.marcas.some((m) => Math.hypot(m.cx - c.cx * f, m.cy - c.cy * f) <= tol));
+        if (!coincide) falha = "A imagem mexeu na hora de ler: segure firme.";
+      }
       Foto.soltarQuadro();
       if (falha) { motivo = falha; proxima = agora() + APOS_FALHA_MS; log("falha", { motivo: falha.slice(0, 80) }); return; }
       const chave = qr.codigo + "|" + qr.matricula;
@@ -263,17 +269,41 @@ const Vivo = (() => {
   function dica(txt) { const d = $("dica"); if (d.textContent !== txt) d.textContent = txt; }
 
   function desenharGuia(det) {
-    const g = $("guia"), c = g.getContext("2d"), W = g.width, H = g.height, v = $("video");
+    const g = $("guia"), c = g.getContext("2d"), W = g.width, H = g.height, v = $("video");   // tudo no espaço do VÍDEO; fx/fy levam ao espaço da tela (o <video> usa object-fit: fill)
     if (!W || !v.videoWidth) return;
     c.clearRect(0, 0, W, H);
-    const m = OMR.moldura(v.videoWidth, v.videoHeight, moldeRef || MOLDE_PADRAO), f = W / v.videoWidth, r = Math.min(W, H) * 0.03;
+    const m = OMR.moldura(v.videoWidth, v.videoHeight, moldeRef || MOLDE_PADRAO), fx = W / v.videoWidth, fy = H / v.videoHeight, r = Math.min(W, H) * 0.03;
     c.lineWidth = Math.max(2, W * 0.004); c.strokeStyle = det.ok ? "rgba(61,220,122,.9)" : "rgba(255,255,255,.75)"; c.setLineDash(det.ok ? [] : [W * 0.03, W * 0.02]);
-    c.beginPath(); c.roundRect ? c.roundRect(m.x * f, m.y * f, m.w * f, m.h * f, r) : c.rect(m.x * f, m.y * f, m.w * f, m.h * f); c.stroke(); c.setLineDash([]);
+    c.beginPath(); c.roundRect ? c.roundRect(m.x * fx, m.y * fy, m.w * fx, m.h * fy, r) : c.rect(m.x * fx, m.y * fy, m.w * fx, m.h * fy); c.stroke(); c.setLineDash([]);
     for (let k = 0; k < 4; k++) {   // verde = marca achada; amarelo = canto sem marca (no lugar esperado)
-      const cn = det.cantos[k], x = (cn.achada ? cn.cx : regs[k].ex) * f, y = (cn.achada ? cn.cy : regs[k].ey) * f;
+      const cn = det.cantos[k], x = (cn.achada ? cn.cx : regs[k].ex) * fx, y = (cn.achada ? cn.cy : regs[k].ey) * fy;
       c.fillStyle = cn.achada ? "#3ddc7a" : "#f2b705";
       c.beginPath(); c.arc(x, y, Math.max(6, W * 0.018), 0, 2 * Math.PI); c.fill();
     }
+  }
+
+  // ?debug=1: o mosaico que a checagem está vendo (TL, TR / BL, BR), com a marca achada circulada, e por que cada canto falhou
+  const NOMES_REJ = ["borda", "razão", "tamanho", "preench.", "clara"];
+  function desenharDebug(img, det, t) {
+    if (t - dbgUltimo < 200) return;
+    dbgUltimo = t;
+    const cv = $("mosaicoDbg"), T = detector.T;
+    if (!dbgCtx) { cv.width = cv.height = 2 * T; dbgCtx = cv.getContext("2d"); }
+    dbgCtx.putImageData(img, 0, 0);
+    dbgCtx.strokeStyle = "#f2b705"; dbgCtx.lineWidth = 1; dbgCtx.strokeRect(0.5, 0.5, 2 * T - 1, 2 * T - 1); dbgCtx.strokeRect(T - 0.5, 0, 1, 2 * T); dbgCtx.strokeRect(0, T - 0.5, 2 * T, 1);
+    const nomes = ["TL", "TR", "BL", "BR"], linhas = [];
+    for (let k = 0; k < 4; k++) {
+      const cn = det.cantos[k], r = regs[k];
+      if (cn.achada) {
+        dbgCtx.strokeStyle = "#3ddc7a"; dbgCtx.lineWidth = 2; dbgCtx.beginPath();
+        dbgCtx.arc((k & 1) * T + (cn.cx - r.sx) / r.s * T, (k >> 1) * T + (cn.cy - r.sy) / r.s * T, 9, 0, 2 * Math.PI); dbgCtx.stroke();
+        linhas.push(`${nomes[k]} ok tam ${cn.razao.toFixed(2)}`);
+      } else linhas.push(`${nomes[k]} --  ` + (Array.from(cn.rej).map((v, i) => v ? NOMES_REJ[i] + "×" + v : "").filter(Boolean).join(" ") || "nada escuro"));
+    }
+    const v = $("video"), p = $("palco").getBoundingClientRect();
+    linhas.push(`vídeo ${v.videoWidth}x${v.videoHeight} · palco ${Math.round(p.width)}x${Math.round(p.height)} · tela ${innerWidth}x${innerHeight} · dpr ${window.devicePixelRatio}`);
+    linhas.push(`recorte ${Math.round(regs[0].s)} px do vídeo → ${T} px · dica ${det.dica || "ok"} · v${self.APP_VERSAO}`);
+    $("debugTxt").textContent = linhas.join("\n");
   }
 
   function metricas() {
@@ -303,6 +333,7 @@ const Vivo = (() => {
     Foto.aquecerQR();                        // 1ª detecção do QR carrega o WebAssembly: faz agora, não na primeira leitura
     const lista = await Foto.listaMoldes();
     if (lista.length) { try { moldeRef = await molde(lista[0]); } catch (e) {} }
+    if (new URLSearchParams(location.search).has("debug")) { debug = true; $("debug").hidden = false; }
     if (new URLSearchParams(location.search).has("perf")) { perfOn = true; $("perf").hidden = false; }
   }
 

@@ -18,6 +18,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 SINT = RAIZ / "testes" / "sinteticos"
 LARG, ALT, FPS = 1080, 1080, 30   # a câmera falsa do Chromium entrega 1080×1080 (recorte central) mesmo com arquivo 1080×1920
 CARTAO_PX = 1450.0   # largura do cartão nominal (sem inclinação) nas fotos sintéticas (sinteticos.fotografar: cw)
+ESCALA = 1.0         # cartão / moldura (0,85 = professor deixou folga em volta)
 PROP = 105 / 148.5   # proporção do cartão a6x4 = da moldura-guia do leitor
 
 
@@ -28,7 +29,7 @@ def quadro_base(nome: str, dx: int = 0, dy: int = 0, gira180: bool = False) -> I
     h_guia = 0.9 * ALT; w_guia = h_guia * PROP
     if w_guia > 0.9 * LARG:
         w_guia = 0.9 * LARG
-    esc = w_guia / CARTAO_PX
+    esc = ESCALA * w_guia / CARTAO_PX
     im = im.resize((round(im.width * esc), round(im.height * esc)), Image.LANCZOS)
     x, y = (im.width - LARG) // 2 - dx, (im.height - ALT) // 2 - dy   # dx,dy: cartão fora do lugar (px do quadro)
     q = im.crop((x, y, x + LARG, y + ALT))
@@ -63,9 +64,14 @@ def deslize(a: Image.Image, b: Image.Image, passos: int):
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("saida")
+    ap.add_argument("--tam", default="1080x1080", help="LARGxALT dos quadros (a câmera falsa do Chromium costuma entregar quadrado; use --gum livre no rodar_vivo)")
+    ap.add_argument("--escala", type=float, default=1.0)
     ap.add_argument("--roteiro", choices=["sequencia", "mesa-vazia", "extras"], default="sequencia")
     ap.add_argument("--a", default="01_base.jpg"); ap.add_argument("--b", default="02_base.jpg"); ap.add_argument("--c", default="13_sombra.jpg")
     a = ap.parse_args()
+    global LARG, ALT, ESCALA
+    ESCALA = a.escala
+    LARG, ALT = (int(x) for x in a.tam.split("x"))
     rnd = random.Random(7)
     mesa = quadro_base("23_negativo_sem_cartao.jpg")
     vazio = variantes(mesa, 6, rnd)

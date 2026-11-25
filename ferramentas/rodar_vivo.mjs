@@ -18,6 +18,8 @@ const esperado = (pega("--esperado", "") || "").split(",").filter(Boolean);
 const maxS = Number(pega("--max", "30"));
 const shot = pega("--screenshot", null);
 const trace = args.includes("--trace") ? (args.splice(args.indexOf("--trace"), 1), true) : false; let dicaAnt = "";
+const viewport = pega("--viewport", null);   // ex.: 390x844x3 (largura x altura x dpr): simula a tela do iPhone
+const gum = pega("--gum", null);             // "livre": getUserMedia sem restrições de tamanho (a câmera falsa então entrega o tamanho do arquivo)
 const shotDica = pega("--shot-dica", null), shotDicaArq = pega("--shot-dica-arq", null);
 const video = resolve(args[0] || "");
 const url = pega("--url", "http://127.0.0.1:8000/leitor/index.html?perf=1");
@@ -40,6 +42,8 @@ try {
   const cdp = (method, params = {}) => new Promise((r) => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
   const ev = async (expressao) => (await cdp("Runtime.evaluate", { expression: expressao, returnByValue: true, awaitPromise: true })).result?.result?.value;
   await cdp("Runtime.enable"); await cdp("Page.enable");
+  if (viewport) { const [w, h, d] = viewport.split("x").map(Number); await cdp("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: d || 1, mobile: true }); }
+  if (gum === "livre") await cdp("Page.addScriptToEvaluateOnNewDocument", { source: "(() => { const o = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices); navigator.mediaDevices.getUserMedia = (c) => o({ audio: false, video: true }); })();" });
   await cdp("Page.navigate", { url });
   await dorme(2500);   // polyfill do QR (jsDelivr) e moldes
   console.log("polyfill BarcodeDetector:", await ev('"BarcodeDetector" in self'));
@@ -80,6 +84,7 @@ try {
     const ok = av.filter((a) => a.ok).length, crit = av.filter((a) => a.critico).length;
     const idOk = leituras[i].matricula === verdade.matricula && leituras[i].codigo === verdade.codigo;
     console.log(`  leitura ${i + 1}: ${esperado[i]} → ${ok}/${av.length} certas, críticas=${crit}, matrícula/código ${idOk ? "batem" : "NÃO BATEM"}, ${leituras[i].ms} ms`);
+    for (const a of av.filter((a) => !a.ok)) console.log(`      Q${a.questao} (${a.tipo}): esperado ${a.esperado} lido ${a.lido}`);
     if (ok !== av.length || crit || !idOk) erros++;
   }
   console.log(erros ? `\nRESULTADO: FALHOU (${erros})` : "\nRESULTADO: OK");
