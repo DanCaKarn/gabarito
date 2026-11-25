@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gabarito — testes do leitor</title>
+<style>
+  body{font:14px/1.4 system-ui,sans-serif;margin:16px;max-width:1100px}
+  table{border-collapse:collapse;margin:8px 0}
+  td,th{border:1px solid #bbb;padding:3px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .ok{background:#d9f5df}.mal{background:#fde2e2}.leve{background:#fff3cd}
+  .grade{display:flex;flex-wrap:wrap;gap:10px}
+  .item{width:230px;font-size:12px}
+  .item canvas{width:230px;border:1px solid #999}
+  pre{background:#f4f4f4;padding:8px;overflow:auto}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/barcode-detector@3.0.8/dist/iife/polyfill.min.js" crossorigin="anonymous"></script>
+<script src="omr.js"></script>
+<script src="foto.js"></script>
+</head>
+<body>
+<h1>Testes do leitor (imagens sintéticas)</h1>
+<p id="estado">Carregando…</p>
+<div id="resumo"></div>
+<div class="grade" id="grade"></div>
+<pre id="resultado" hidden></pre>
+<script>
+const params = new URLSearchParams(location.search);
+const SEM_QR = params.has("semqr");          // ?semqr=1: ignora o QR (testa a orientação inferida)
+const AUTO = params.has("auto");
+// ?c.LIMIAR_MARCA=0.7&c.FOLGA=0.2 …: ajusta constantes sem editar o arquivo (calibração)
+for (const [k, v] of params) if (k.startsWith("c.") && k.slice(2) in OMR.C) OMR.C[k.slice(2)] = Number(v);
+
+const TIPOS = ["cheia", "x", "meia", "dupla", "branco", "recusa"];
+
+async function main() {
+  const idx = await (await fetch("../testes/sinteticos/index.json")).json();
+  const porTipo = {}, porCaso = {}, linhas = [], criticos = [], dist = {};
+  let tot = { n: 0, ok: 0, critico: 0, leve: 0 };
+  const somar = (obj, chave, a) => { const o = obj[chave] = obj[chave] || { n: 0, ok: 0, critico: 0, leve: 0 }; o.n++; if (a.ok) o.ok++; if (a.critico) o.critico++; if (a.leve) o.leve++; };
+  for (const item of idx) {
+    document.getElementById("estado").textContent = `Lendo ${item.imagem}…`;
+    const verdade = await (await fetch("../testes/sinteticos/" + item.verdade)).json();
+    const blob = await (await fetch("../testes/sinteticos/" + item.imagem)).blob();
+    const { cQR, cOMR } = await Foto.carregar(blob);
+    let qr = null, qrErro = null;
+    try { qr = SEM_QR ? null : await Foto.lerQR(cQR, cOMR); } catch (e) { qrErro = String(e); }
+    const codigo = qr && qr.codigo ? qr.codigo : (SEM_QR ? verdade.codigo : null);
+    const molde = codigo ? await Foto.moldePorCodigo(codigo) : null;
+    let res;
+    if (!molde) res = { ok: false, erro: "molde não encontrado/QR não lido", respostas: [], marcas: [], bolhas: [], avisos: [], tempos_ms: {} };
+    else res = OMR.ler(Foto.imageData(cOMR), molde, qr && !qr.invalido ? qr : null);
+    if (verdade.negativo) {   // negativo: o leitor deve RECUSAR com erro claro (nunca ler no chute)
+      const recusou = !res.ok && !!res.erro;
+      somar(porTipo, "recusa", { ok: recusou, critico: res.ok, leve: false }); for (const t of verdade.casos) somar(porCaso, t, { ok: recusou, critico: res.ok, leve: false });
+      tot.n++; tot.ok += recusou; tot.critico += res.ok;
+      if (res.ok) criticos.push(`${item.imagem}: leu uma foto inválida como se fosse boa`);
+      linhas.push({ imagem: item.imagem, casos: verdade.casos.join("+"), ok: recusou ? 1 : 0, n: 1, criticos: res.ok ? 1 : 0, leves: [], erro: res.erro || null, avisos: res.avisos || [], qr: qr ? "ok" : "não lido", matricula_ok: null, tempo_ms: res.tempos_ms.total, marcas: [], cand: [], dim: [cOMR.width, cOMR.height] });
+      continue;
+    }
+    const av = res.ok ? OMR.avaliar(res, verdade) : verdade.respostas.map(v => ({ questao: v.questao, tipo: v.tipo, ok: false, critico: false, leve: true, lido: "falhou" }));
+    const matOk = qr ? qr.matricula === verdade.matricula : null;
+    for (const a of av) { somar(porTipo, a.tipo, a); for (const t of verdade.casos) somar(porCaso, t, a); tot.n++; tot.ok += a.ok; tot.critico += a.critico; tot.leve += a.leve;
+      if (a.critico) criticos.push(`${item.imagem} Q${a.questao} (${a.tipo}) lido=${a.lido}`); }
+    for (const v of verdade.respostas) {   // distribuição dos valores medidos, por tipo (para calibrar limiares)
+      const l = res.respostas.find(r => r.questao === v.questao); if (!l) continue;
+      const ord = Object.values(l.valores).sort((a, b) => b - a);
+      (dist[v.tipo] = dist[v.tipo] || []).push([ord[0], ord[1], item.imagem.slice(0, 2)]);
+    }
+    const nOk = av.filter(a => a.ok).length;
+    linhas.push({ imagem: item.imagem, casos: verdade.casos.join("+"), ok: nOk, n: av.length, criticos: av.filter(a => a.critico).length,
+      leves: av.filter(a => a.leve).map(a => `Q${a.questao}:${a.tipo}→${a.lido}`), erro: res.erro || null, avisos: res.avisos,
+      qr: qr ? (qr.invalido ? "inválido" : "ok") : (SEM_QR ? "ignorado" : "não lido"), matricula_ok: matOk, orient: res.orientacao || null,
+      bloco_achado: res.marcas_bloco_achadas, marcas: (res.marcas || []).map(m => [Math.round(m.cx), Math.round(m.cy), Math.round(m.lado)]), top: res.componentes_top, n_cand: (res.candidatas || []).length, cand: (res.candidatas || []).map(m => [Math.round(m.cx), Math.round(m.cy), Math.round(m.lado)]), dim: [cOMR.width, cOMR.height], tempo_ms: res.tempos_ms.total, qrErro });
+    // miniatura com desenho
+    const div = document.createElement("div"); div.className = "item";
+    const cv = document.createElement("canvas"); cv.width = cOMR.width; cv.height = cOMR.height;
+    const ctx = cv.getContext("2d"); ctx.drawImage(cOMR, 0, 0); Foto.sobrepor(ctx, res, 1);
+    div.appendChild(cv);
+    const cap = document.createElement("div"); cap.textContent = `${item.imagem}: ${nOk}/${av.length}${res.erro ? " — ERRO: " + res.erro : ""}`;
+    cap.className = nOk === av.length ? "ok" : (av.some(a => a.critico) ? "mal" : "leve"); div.appendChild(cap);
+    document.getElementById("grade").appendChild(div);
+  }
+  const pct = (o) => `${o.ok}/${o.n} (${(100 * o.ok / o.n).toFixed(0)}%)`;
+  const resumo = { total: tot, por_tipo: porTipo, por_caso: porCaso, criticos, imagens: linhas, distribuicao: dist, constantes: OMR.C, semqr: SEM_QR };
+  const h = [`<h2>Total: ${pct(tot)} — letras erradas (críticas): ${tot.critico}, falhas leves: ${tot.leve}</h2>`];
+  h.push("<h3>Por tipo de marcação</h3><table><tr><th>tipo</th><th>acerto</th><th>críticos</th><th>leves</th></tr>");
+  for (const t of TIPOS) if (porTipo[t]) h.push(`<tr class="${porTipo[t].critico ? "mal" : porTipo[t].ok === porTipo[t].n ? "ok" : "leve"}"><td>${t}</td><td>${pct(porTipo[t])}</td><td>${porTipo[t].critico}</td><td>${porTipo[t].leve}</td></tr>`);
+  h.push("</table><h3>Por tipo de foto</h3><table><tr><th>caso</th><th>acerto</th><th>críticos</th></tr>");
+  for (const [k, o] of Object.entries(porCaso)) h.push(`<tr class="${o.critico ? "mal" : o.ok === o.n ? "ok" : "leve"}"><td>${k}</td><td>${pct(o)}</td><td>${o.critico}</td></tr>`);
+  h.push("</table>");
+  document.getElementById("resumo").innerHTML = h.join("");
+  document.getElementById("estado").textContent = "Pronto.";
+  const out = document.getElementById("resultado"); out.textContent = JSON.stringify(resumo, null, 1); if (AUTO) out.hidden = false;
+  window.__resultado = resumo;
+}
+main().catch(e => { document.getElementById("estado").textContent = "ERRO: " + e; window.__resultado = { falha: String(e && e.stack || e) }; });
+</script>
+</body>
+</html>

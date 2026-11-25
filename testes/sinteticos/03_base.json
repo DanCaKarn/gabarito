@@ -1,0 +1,85 @@
+{
+ "arquivo": "03_base.jpg",
+ "codigo": "teste-mat-10q",
+ "matricula": "",
+ "casos": [
+  "base"
+ ],
+ "caneta": "azul",
+ "tilt": [
+  0,
+  0
+ ],
+ "rotacao": 1.5,
+ "sombra": 0.0,
+ "desfoque": 0.0,
+ "ruido": 0,
+ "jpeg": 85,
+ "respostas": [
+  {
+   "questao": 1,
+   "tipo": "cheia",
+   "estado": "marcada",
+   "letra": "A"
+  },
+  {
+   "questao": 2,
+   "tipo": "meia",
+   "estado": "duvida",
+   "letras": [
+    "B"
+   ]
+  },
+  {
+   "questao": 3,
+   "tipo": "cheia",
+   "estado": "marcada",
+   "letra": "D"
+  },
+  {
+   "questao": 4,
+   "tipo": "cheia",
+   "estado": "marcada",
+   "letra": "A"
+  },
+  {
+   "questao": 5,
+   "tipo": "cheia",
+   "estado": "marcada",
+   "letra": "D"
+  },
+  {
+   "questao": 6,
+   "tipo": "branco",
+   "estado": "branco"
+  },
+  {
+   "questao": 7,
+   "tipo": "cheia",
+   "estado": "marcada",
+   "letra": "C"
+  },
+  {
+   "questao": 8,
+   "tipo": "x",
+   "estado": "duvida",
+   "letras": [
+    "D"
+   ]
+  },
+  {
+   "questao": 9,
+   "tipo": "branco",
+   "estado": "branco"
+  },
+  {
+   "questao": 10,
+   "tipo": "dupla",
+   "estado": "dupla",
+   "letras": [
+    "B",
+    "C"
+   ]
+  }
+ ]
+}

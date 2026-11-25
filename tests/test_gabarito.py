@@ -101,7 +101,7 @@ class Cli(unittest.TestCase):
     def test_turma_sem_ativos_nao_gera_pdf(self):
         with tempfile.TemporaryDirectory() as d:
             r = main(["--prova", str(RAIZ / "provas/teste-mat-10q.json"), "--alunos",
-                      str(RAIZ / "dados/exemplo.csv"), "--turma", "7º Z", "--saida", d])
+                      str(RAIZ / "dados/exemplo.csv"), "--turma", "7º Z", "--saida", d, "--moldes", d + "/m"])
             self.assertEqual(r, 1)
             self.assertEqual(list(Path(d).iterdir()), [])
 
@@ -112,8 +112,11 @@ class Cli(unittest.TestCase):
                 {"prova": str(RAIZ / "provas/teste-mat-10q.json"), "turma": "9º C"},
                 {"prova": str(RAIZ / "provas/teste-mat-10q-b.json"), "turma": "9° d"}]))
             r = main(["--alunos", str(RAIZ / "dados/exemplo.csv"), "--lote", str(lote),
-                      "--saida", d + "/o"])
+                      "--saida", d + "/o", "--moldes", d + "/m"])
             self.assertEqual(r, 0)
+            self.assertEqual(json.loads(Path(d, "m/index.json").read_text()), ["teste-mat-10q", "teste-mat-10q-b"])
+            self.assertEqual(Path(d, "m/teste-mat-10q_molde.json").read_text(),
+                             Path(d, "o/teste-mat-10q_molde.json").read_text())
             nomes = {p.name for p in Path(d, "o").iterdir()}
             self.assertTrue({"teste-mat-10q_9c.pdf", "teste-mat-10q-b_9d.pdf",
                              "teste-mat-10q_molde.json", "teste-mat-10q-b_molde.json"} <= nomes)
@@ -228,7 +231,7 @@ class Montagem(unittest.TestCase):
     def test_pdf_a6_paginas(self):
         with tempfile.TemporaryDirectory() as d:
             r = main(["--prova", str(RAIZ / "provas/teste-mat-10q.json"), "--alunos",
-                      str(RAIZ / "dados/exemplo.csv"), "--turma", "9º C", "--formato", "a6x4", "--saida", d])
+                      str(RAIZ / "dados/exemplo.csv"), "--turma", "9º C", "--formato", "a6x4", "--saida", d, "--moldes", d + "/m"])
             self.assertEqual(r, 0)
             self.assertEqual(Path(d, "teste-mat-10q_9c.pdf").read_bytes().count(b"/Type /Page\n"), 2)
             self.assertEqual(json.loads(Path(d, "teste-mat-10q_molde.json").read_text())["formato"], "a6x4")
@@ -241,6 +244,22 @@ class Montagem(unittest.TestCase):
             self.assertEqual(p.bloco, "Matemática")
             L = lo.calcular_layout(p, "a6x4")        # também exige os logos em marca/
             self.assertEqual(L.formato, "a6x4")
+
+
+class Moldes(unittest.TestCase):
+    def test_molde_versionado_bate_com_o_layout(self):
+        """moldes/ (usado pelo leitor) tem de ser exatamente o que layout.py calcula hoje."""
+        idx = json.loads((RAIZ / "moldes/index.json").read_text(encoding="utf-8"))
+        self.assertIn("teste-mat-10q", idx)
+        for cod in idx:
+            molde = json.loads((RAIZ / f"moldes/{cod}_molde.json").read_text(encoding="utf-8"))
+            p = carregar_prova(RAIZ / f"provas/{cod}.json")
+            self.assertEqual(molde, json.loads(json.dumps(lo.calcular_layout(p, molde["formato"]).para_molde())))
+
+    def test_sinteticos_so_ficticios(self):
+        for j in (RAIZ / "testes/sinteticos").glob("[0-9]*.json"):
+            d = json.loads(j.read_text(encoding="utf-8"))
+            self.assertIn(d["matricula"], ("", "2023000001", "2023000002", "2023000003"))
 
 
 class ProvasReais(unittest.TestCase):

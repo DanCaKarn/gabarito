@@ -1,0 +1,10 @@
+{
+ "arquivo": "23_negativo_sem_cartao.jpg",
+ "codigo": "teste-mat-10q",
+ "matricula": "",
+ "casos": [
+  "negativo_sem_cartao"
+ ],
+ "negativo": true,
+ "respostas": []
+}

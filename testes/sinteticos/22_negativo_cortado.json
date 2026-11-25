@@ -1,0 +1,10 @@
+{
+ "arquivo": "22_negativo_cortado.jpg",
+ "codigo": "teste-mat-10q",
+ "matricula": "2023000002",
+ "casos": [
+  "negativo_cortado"
+ ],
+ "negativo": true,
+ "respostas": []
+}

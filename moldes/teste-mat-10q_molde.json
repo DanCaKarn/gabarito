@@ -1,0 +1,358 @@
+{
+  "versao": 1,
+  "formato": "a6x4",
+  "unidade": "mm",
+  "origem": "canto superior esquerdo do cartão; x para a direita, y para baixo",
+  "cartao": {
+    "largura": 105.0,
+    "altura": 148.5
+  },
+  "prova": {
+    "codigo": "teste-mat-10q",
+    "questoes": 10,
+    "alternativas": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  },
+  "marcas": [
+    {
+      "cx": 8.0,
+      "cy": 8.0,
+      "tamanho": 6.0
+    },
+    {
+      "cx": 97.0,
+      "cy": 8.0,
+      "tamanho": 6.0
+    },
+    {
+      "cx": 8.0,
+      "cy": 140.5,
+      "tamanho": 6.0
+    },
+    {
+      "cx": 97.0,
+      "cy": 140.5,
+      "tamanho": 6.0
+    }
+  ],
+  "qr": {
+    "x": 72.02,
+    "y": 25.66,
+    "tamanho": 17.82,
+    "modulos": 33,
+    "modulo_mm": 0.54,
+    "versao_qr": 4,
+    "silencio_mm": 2.16,
+    "zona_silencio": {
+      "x": 69.86,
+      "y": 23.5,
+      "largura": 22.14,
+      "altura": 22.14
+    }
+  },
+  "bloco_respostas": {
+    "x": 13.0,
+    "y": 58.7,
+    "largura": 79.0,
+    "altura": 40.9
+  },
+  "marcas_bloco": [
+    {
+      "cx": 15.0,
+      "cy": 61.2,
+      "tamanho": 4.0
+    }
+  ],
+  "recorte_auditoria": {
+    "x": 13.0,
+    "y": 49.5,
+    "largura": 79.0,
+    "altura": 86.5
+  },
+  "bolhas": [
+    {
+      "questao": 1,
+      "alternativa": "A",
+      "cx": 29.9,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 1,
+      "alternativa": "B",
+      "cx": 35.4,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 1,
+      "alternativa": "C",
+      "cx": 40.9,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 1,
+      "alternativa": "D",
+      "cx": 46.4,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 2,
+      "alternativa": "A",
+      "cx": 29.9,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 2,
+      "alternativa": "B",
+      "cx": 35.4,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 2,
+      "alternativa": "C",
+      "cx": 40.9,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 2,
+      "alternativa": "D",
+      "cx": 46.4,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 3,
+      "alternativa": "A",
+      "cx": 29.9,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 3,
+      "alternativa": "B",
+      "cx": 35.4,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 3,
+      "alternativa": "C",
+      "cx": 40.9,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 3,
+      "alternativa": "D",
+      "cx": 46.4,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 4,
+      "alternativa": "A",
+      "cx": 29.9,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 4,
+      "alternativa": "B",
+      "cx": 35.4,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 4,
+      "alternativa": "C",
+      "cx": 40.9,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 4,
+      "alternativa": "D",
+      "cx": 46.4,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 5,
+      "alternativa": "A",
+      "cx": 29.9,
+      "cy": 96.0,
+      "r": 2.1
+    },
+    {
+      "questao": 5,
+      "alternativa": "B",
+      "cx": 35.4,
+      "cy": 96.0,
+      "r": 2.1
+    },
+    {
+      "questao": 5,
+      "alternativa": "C",
+      "cx": 40.9,
+      "cy": 96.0,
+      "r": 2.1
+    },
+    {
+      "questao": 5,
+      "alternativa": "D",
+      "cx": 46.4,
+      "cy": 96.0,
+      "r": 2.1
+    },
+    {
+      "questao": 6,
+      "alternativa": "A",
+      "cx": 64.1,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 6,
+      "alternativa": "B",
+      "cx": 69.6,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 6,
+      "alternativa": "C",
+      "cx": 75.1,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 6,
+      "alternativa": "D",
+      "cx": 80.6,
+      "cy": 74.0,
+      "r": 2.1
+    },
+    {
+      "questao": 7,
+      "alternativa": "A",
+      "cx": 64.1,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 7,
+      "alternativa": "B",
+      "cx": 69.6,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 7,
+      "alternativa": "C",
+      "cx": 75.1,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 7,
+      "alternativa": "D",
+      "cx": 80.6,
+      "cy": 79.5,
+      "r": 2.1
+    },
+    {
+      "questao": 8,
+      "alternativa": "A",
+      "cx": 64.1,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 8,
+      "alternativa": "B",
+      "cx": 69.6,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 8,
+      "alternativa": "C",
+      "cx": 75.1,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 8,
+      "alternativa": "D",
+      "cx": 80.6,
+      "cy": 85.0,
+      "r": 2.1
+    },
+    {
+      "questao": 9,
+      "alternativa": "A",
+      "cx": 64.1,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 9,
+      "alternativa": "B",
+      "cx": 69.6,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 9,
+      "alternativa": "C",
+      "cx": 75.1,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 9,
+      "alternativa": "D",
+      "cx": 80.6,
+      "cy": 90.5,
+      "r": 2.1
+    },
+    {
+      "questao": 10,
+      "alternativa": "A",
+      "cx": 64.1,
+      "cy": 96.0,
+      "r": 2.1
+    },
+    {
+      "questao": 10,
+      "alternativa": "B",
+      "cx": 69.6,
+      "cy": 96.0,
+      "r": 2.1
+    },
+    {
+      "questao": 10,
+      "alternativa": "C",
+      "cx": 75.1,
+      "cy": 96.0,
+      "r": 2.1
+    },
+    {
+      "questao": 10,
+      "alternativa": "D",
+      "cx": 80.6,
+      "cy": 96.0,
+      "r": 2.1
+    }
+  ]
+}

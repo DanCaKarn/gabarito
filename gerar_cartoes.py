@@ -55,6 +55,8 @@ def main(argv=None) -> int:
     ap.add_argument("--alunos", required=True)
     ap.add_argument("--genericos", type=int, default=3)
     ap.add_argument("--saida", default=str(RAIZ / "saida"))
+    ap.add_argument("--moldes", default=str(RAIZ / "moldes"),
+                    help="pasta onde cada molde também é gravado (versionada: o molde não tem dados pessoais)")
     a = ap.parse_args(argv)
     try:
         if a.lote:
@@ -87,6 +89,8 @@ def main(argv=None) -> int:
 
         saida = Path(a.saida)
         saida.mkdir(parents=True, exist_ok=True)
+        pasta_moldes = Path(a.moldes)
+        pasta_moldes.mkdir(parents=True, exist_ok=True)
         moldes_feitos, conf_feitas = set(), set()
         for (prova, L, turma, ativos, ign), dest in zip(planos, destinos):
             pdf = saida / f"{dest}.pdf"
@@ -94,6 +98,7 @@ def main(argv=None) -> int:
             molde = saida / f"{prova.codigo}_molde.json"
             if prova.codigo not in moldes_feitos:
                 molde.write_text(json.dumps(L.para_molde(), ensure_ascii=False, indent=2), encoding="utf-8")
+                (pasta_moldes / molde.name).write_text(molde.read_text(encoding="utf-8"), encoding="utf-8")
                 moldes_feitos.add(prova.codigo)
             if prova.codigo not in conf_feitas:
                 conferencia.gerar_conferencia(pdf, molde, saida / f"{prova.codigo}_conferencia.png")
@@ -101,6 +106,10 @@ def main(argv=None) -> int:
                 conf_feitas.add(prova.codigo)
             print(f"[{prova.codigo}] turma {turma} ({L.formato}): {len(ativos)} alunos + {gen} genéricos "
                   f"= {n} cartões em {paginas} páginas ({ign} ignorados por situação) -> {pdf.name}")
+        if moldes_feitos:   # índice para o seletor do leitor
+            codigos = sorted(p.name[: -len("_molde.json")] for p in pasta_moldes.glob("*_molde.json"))
+            (pasta_moldes / "index.json").write_text(json.dumps(codigos, ensure_ascii=False, indent=2) + "\n",
+                                                     encoding="utf-8")
     except ErroGabarito as e:
         print(f"ERRO: {e}", file=sys.stderr)
         return 1

@@ -5,3 +5,6 @@ saida/
 .venv/
 __pycache__/
 *.pyc
+
+# Sintéticos: regeneráveis com `uv run sinteticos.py` (semente fixa)
+testes/sinteticos/*.jpg

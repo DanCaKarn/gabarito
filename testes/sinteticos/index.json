@@ -1,0 +1,94 @@
+[
+ {
+  "imagem": "01_base.jpg",
+  "verdade": "01_base.json"
+ },
+ {
+  "imagem": "02_base.jpg",
+  "verdade": "02_base.json"
+ },
+ {
+  "imagem": "03_base.jpg",
+  "verdade": "03_base.json"
+ },
+ {
+  "imagem": "04_base.jpg",
+  "verdade": "04_base.json"
+ },
+ {
+  "imagem": "05_perspectiva.jpg",
+  "verdade": "05_perspectiva.json"
+ },
+ {
+  "imagem": "06_perspectiva.jpg",
+  "verdade": "06_perspectiva.json"
+ },
+ {
+  "imagem": "07_perspectiva.jpg",
+  "verdade": "07_perspectiva.json"
+ },
+ {
+  "imagem": "08_perspectiva.jpg",
+  "verdade": "08_perspectiva.json"
+ },
+ {
+  "imagem": "09_rotacao.jpg",
+  "verdade": "09_rotacao.json"
+ },
+ {
+  "imagem": "10_rotacao.jpg",
+  "verdade": "10_rotacao.json"
+ },
+ {
+  "imagem": "11_cabeca_baixo.jpg",
+  "verdade": "11_cabeca_baixo.json"
+ },
+ {
+  "imagem": "12_rot90.jpg",
+  "verdade": "12_rot90.json"
+ },
+ {
+  "imagem": "13_sombra.jpg",
+  "verdade": "13_sombra.json"
+ },
+ {
+  "imagem": "14_sombra.jpg",
+  "verdade": "14_sombra.json"
+ },
+ {
+  "imagem": "15_sombra.jpg",
+  "verdade": "15_sombra.json"
+ },
+ {
+  "imagem": "16_desfoque_ruido.jpg",
+  "verdade": "16_desfoque_ruido.json"
+ },
+ {
+  "imagem": "17_desfoque_ruido.jpg",
+  "verdade": "17_desfoque_ruido.json"
+ },
+ {
+  "imagem": "18_desfoque_ruido.jpg",
+  "verdade": "18_desfoque_ruido.json"
+ },
+ {
+  "imagem": "19_jpeg_baixo.jpg",
+  "verdade": "19_jpeg_baixo.json"
+ },
+ {
+  "imagem": "20_jpeg_baixo.jpg",
+  "verdade": "20_jpeg_baixo.json"
+ },
+ {
+  "imagem": "21_combinado.jpg",
+  "verdade": "21_combinado.json"
+ },
+ {
+  "imagem": "22_negativo_cortado.jpg",
+  "verdade": "22_negativo_cortado.json"
+ },
+ {
+  "imagem": "23_negativo_sem_cartao.jpg",
+  "verdade": "23_negativo_sem_cartao.json"
+ }
+]

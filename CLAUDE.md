@@ -31,3 +31,16 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
 - Prova em `provas/<codigo>.json` SEM gabarito (respostas certas não entram nos cartões).
 - Turma comparada normalizando espaços, maiúsculas e º/° ("9º C" = "9ºC" = "9° c").
 - Situação: em branco = ativo; qualquer outro valor (ex.: "Transferido") = pular.
+
+## Leitor (leitor/, protótipo v0, no navegador)
+- A FOTO NUNCA SAI DO APARELHO: sem upload, sem envio a servidor, sem localStorage/sessionStorage/IndexedDB com imagem
+  ou nome. Só o molde (sem dados pessoais) é buscado por fetch (`../moldes/<codigo>_molde.json`).
+- O leitor não tem nomes de alunos e nunca os mostra: só matrícula (do QR) e código da prova.
+- `leitor/omr.js` = visão em funções puras (sem DOM), testável fora da página; `leitor/foto.js` = ponte com o navegador.
+- Todos os limiares ficam em `OMR.C` (topo de omr.js). Nunca ler "no chute": se faltar marca/QR/proporção, recusar com erro claro.
+- QR: polyfill `barcode-detector@3.0.8` (jsDelivr, crossorigin="anonymous"), `qr_code`, lido numa cópia de até 2400 px;
+  o resto da leitura usa 1600 px. Foto decodificada com `imageOrientation: "from-image"` (EXIF do iPhone).
+- `moldes/` é versionado (o gerador grava uma cópia a cada execução); `testes/sinteticos/` também (só fictícios, `uv run sinteticos.py`).
+- Medir: `python3 -m http.server 8000 --bind 127.0.0.1` e `node ferramentas/rodar_testes.mjs` (Chromium headless).
+- Teste no iPhone: `./servir_leitor.sh` (serve uma CÓPIA de leitor/, moldes/, testes/; dados/ e saida/ nunca ficam expostos).
+  Nunca servir a raiz do projeto com `--bind 0.0.0.0`.
