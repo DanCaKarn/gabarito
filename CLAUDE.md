@@ -44,3 +44,15 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
 - Medir: `python3 -m http.server 8000 --bind 127.0.0.1` e `node ferramentas/rodar_testes.mjs` (Chromium headless).
 - Teste no iPhone: `./servir_leitor.sh` (serve uma CÓPIA de leitor/, moldes/, testes/; dados/ e saida/ nunca ficam expostos).
   Nunca servir a raiz do projeto com `--bind 0.0.0.0`.
+
+### Modo ao vivo (etapa 4)
+- `leitor/vivo.js` (câmera + laço), `resultado.js` (tela do resultado), `erro.js` (aviso de erro na tela, corta 6+ dígitos),
+  `version.js` (APP_VERSAO/APP_DATA: SUBIR a cada mudança em leitor/; aparece no rodapé e no aviso de erro). Sem service worker.
+- Laço: a cada ~120 ms, quadro de ≤720 px → `OMR.detectarMarcas` (só as 4 marcas); ≥3 checagens estáveis (deslocamento <1,5% do lado)
+  → captura o quadro na resolução TOTAL → QR + `OMR.ler`. Constantes `VIVO_*` em `OMR.C`. Nenhum quadro é guardado/enviado.
+- Anti-repetição: após "Confirmar", mesmo código+matrícula só relê depois que as marcas somem por ≥1 s (ou "Ler de novo").
+- Tudo que roda na inicialização é declarado ANTES (lição da Caderneta). Câmera: liberar em visibilitychange/pagehide, religar ao voltar.
+- Câmera ao vivo exige HTTPS: `./servir_leitor.sh` agora serve por HTTPS (autoassinado, efêmero) na porta 8443; `HTTPS=0` volta ao HTTP (só foto).
+- Teste ao vivo (câmera falsa do Chromium): `uv run sinteticos.py` (gera os JPGs, que são ignorados no git), depois
+  `python3 ferramentas/video_teste.py /tmp/seq.mjpeg` e `node ferramentas/rodar_vivo.mjs /tmp/seq.mjpeg --esperado 01_base,05_perspectiva`
+  (e `--roteiro mesa-vazia` + sem `--esperado`: não pode ler nada). Os vídeos ficam fora do repositório.

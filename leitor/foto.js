@@ -30,6 +30,14 @@ const Foto = (() => {
     return { cQR, cOMR };
   }
 
+  // Quadro ao vivo → as mesmas duas versões (2400 px p/ QR, 1600 px p/ leitura), a partir do quadro na resolução TOTAL do vídeo.
+  function deVideo(video) {
+    const cheio = document.createElement("canvas");
+    cheio.width = video.videoWidth; cheio.height = video.videoHeight;
+    cheio.getContext("2d").drawImage(video, 0, 0);
+    return { cQR: desenhar(cheio, OMR.C.LADO_MAX_QR), cOMR: desenhar(cheio, OMR.C.LADO_MAX), largura: cheio.width, altura: cheio.height };
+  }
+
   const imageData = (c) => c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
 
   async function lerQR(cQR, cOMR) {
@@ -80,5 +88,5 @@ const Foto = (() => {
     return `dúvida (${(r.letras || []).join(", ") || "—"})`;
   }
 
-  return { carregar, imageData, lerQR, moldePorCodigo, listaMoldes, sobrepor, descricao };
+  return { carregar, deVideo, imageData, lerQR, moldePorCodigo, listaMoldes, sobrepor, descricao };
 })();

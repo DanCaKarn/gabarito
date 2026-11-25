@@ -27,6 +27,13 @@
     TOL_PROPORCAO: 0.15,     // tolerância da proporção do quadrilátero × molde
     TOL_QR_MM: 3,            // QR previsto × QR visto
     TOL_BLOCO_MM: 2.5,       // busca da marca do bloco perto da posição prevista
+    // --- modo ao vivo (detecção rápida só das 4 marcas) ---
+    VIVO_LADO: 720,          // px, maior lado do quadro reduzido usado na detecção ao vivo
+    VIVO_AREA_MIN: 0.10,     // área do quadrilátero das marcas / área do quadro: abaixo disto, "Aproxime"
+    VIVO_AREA_MAX: 0.85,     // acima disto (ou marca encostada na borda), "Afaste"
+    VIVO_BORDA: 0.012,       // marca a menos desta fração da borda do quadro = cartão cortado
+    VIVO_DESLOC: 0.015,      // deslocamento máximo entre checagens, como fração do lado do quadrilátero
+    VIVO_ESTAVEIS: 3,        // checagens seguidas, estáveis, antes de capturar o quadro inteiro
   };
 
   const agora = typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
@@ -282,6 +289,53 @@
 
   function escalarPontos(pts, f) { return pts.map(p => ({ x: p.x * f, y: p.y * f })); }
 
+
+  // ===================== modo ao vivo: detecção rápida das 4 marcas =====================
+  /* detectarMarcas(img, molde, opc) — só as marcas de canto, num quadro reduzido (C.VIVO_LADO).
+   * `molde` serve apenas para a proporção do cartão (todos os moldes do mesmo formato têm a mesma).
+   * Devolve {achou, ok, dica, marcas[{cx,cy,lado}] (px do quadro reduzido), largura, altura, ladoQuad, areaRel, candidatas, ms}.
+   *   achou = 4 marcas válidas (quadrilátero com a proporção do cartão); ok = achou E tamanho/posição bons para capturar.
+   *   dica: "aponte" | "reto" | "aproxime" | "afaste" | null */
+  function detectarMarcas(img, molde, opc) {
+    opc = opc || {};
+    const t0 = agora();
+    const g = cinzaVermelho(img, opc.lado || C.VIVO_LADO), w = g.width, h = g.height;
+    const gs = suavizar3(g.gray, w, h), I = integral(gs, w, h);
+    const ink = limiarAdaptativo(gs, w, h, C.JANELA_MARCAS * w, C.DESCONTO, C.DIF_MIN, I);
+    const cands = candidatosMarca(componentes(ink, w, h, 6), w, h, C.MARCA_LADO_MIN, C.MARCA_LADO_MAX);
+    const out = { achou: false, ok: false, dica: "aponte", marcas: [], largura: w, altura: h, candidatas: cands.length };
+    try {
+      const ord = escolherMarcas(cands, w, h, molde);
+      out.marcas = ord.map(p => ({ cx: p.cx, cy: p.cy, lado: p.lado }));
+      out.achou = true;
+      let area = 0;
+      for (let i = 0; i < 4; i++) { const a = ord[i], b = ord[(i + 1) % 4]; area += a.cx * b.cy - b.cx * a.cy; }
+      out.areaRel = Math.abs(area) / 2 / (w * h);
+      out.ladoQuad = [0, 1, 2, 3].reduce((s, i) => s + dist(ord[i], ord[(i + 1) % 4]), 0) / 4;
+      const bx = C.VIVO_BORDA * w, by = C.VIVO_BORDA * h;
+      const cortado = ord.some(p => p.cx - p.lado / 2 < bx || p.cx + p.lado / 2 > w - bx || p.cy - p.lado / 2 < by || p.cy + p.lado / 2 > h - by);
+      if (out.areaRel < C.VIVO_AREA_MIN) out.dica = "aproxime";
+      else if (out.areaRel > C.VIVO_AREA_MAX || cortado) out.dica = "afaste";
+      else { out.ok = true; out.dica = null; }
+    } catch (e) {
+      if (!(e instanceof ErroLeitura)) throw e;
+      out.dica = /propor/.test(e.message) ? "reto" : "aponte";
+    }
+    out.ms = Math.round((agora() - t0) * 10) / 10;
+    return out;
+  }
+
+  // Maior deslocamento de uma marca de `a` para a marca mais próxima de `b`, como fração do lado do quadrilátero de `b`.
+  function deslocamentoRel(a, b) {
+    let pior = 0;
+    for (const p of a.marcas) {
+      let m = Infinity;
+      for (const q of b.marcas) m = Math.min(m, Math.hypot(p.cx - q.cx, p.cy - q.cy));
+      pior = Math.max(pior, m);
+    }
+    return pior / b.ladoQuad;
+  }
+
   // ===================== 8. leitura completa =====================
   /* ler(img, molde, qr, opc)
    *   img   : {width,height,data} (RGBA), de preferência já ≤ LADO_MAX
@@ -390,5 +444,5 @@
   }
 
   return { C, ErroLeitura, cinzaVermelho, suavizar3, integral, limiarAdaptativo, componentes, candidatosMarca, escolherMarcas,
-    homografia, projetar, pxPorMm, medirBolhas, decidirQuestao, parseQR, escalarPontos, ler, avaliar };
+    homografia, projetar, pxPorMm, medirBolhas, decidirQuestao, parseQR, escalarPontos, ler, avaliar, detectarMarcas, deslocamentoRel };
 });

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Gabarito — leitor</title>
 <style>
@@ -10,165 +10,165 @@
   @media (prefers-color-scheme:dark){:root{--bg:#101316;--fg:#e8ecef;--mut:#9aa6b0;--bd:#2c343b;--ok:#3ddc7a;--dv:#f2b705;--er:#ff6b6b;--az:#6ea8ff;--card:#1a1f24}}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
-  main{max-width:720px;margin:0 auto;padding:14px 16px 40px}
+  main{max-width:720px;margin:0 auto;padding:14px 16px 24px}
   h1{font-size:1.25rem;margin:0 0 2px}
   .sub{color:var(--mut);font-size:.9rem;margin:0 0 14px}
-  .botoes{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-  .btn{display:inline-block;padding:14px 18px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font-size:1rem;font-weight:600;cursor:pointer}
-  .btn.primario{background:var(--az);border-color:var(--az);color:#fff;flex:1;text-align:center}
+  .botoes{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .btn{display:inline-block;padding:14px 18px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font-size:1rem;font-weight:600;cursor:pointer;text-align:center}
+  .btn.primario{background:var(--az);border-color:var(--az);color:#fff;flex:1}
+  .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;flex:1}
   .btn:disabled{opacity:.5}
   input[type=file]{display:none}
   .aviso{border-left:4px solid var(--dv);background:var(--card);padding:8px 12px;margin:8px 0;border-radius:6px}
   .erro{border-left-color:var(--er)}
   .quadro{position:relative;margin:10px 0}
-  canvas{width:100%;height:auto;display:block;border:1px solid var(--bd);border-radius:8px;background:#000}
+  #tela{width:100%;height:auto;display:block;border:1px solid var(--bd);border-radius:8px;background:#000}
   .id{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;margin:8px 0}
   .id b{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.15rem}
   .id span{color:var(--mut);font-size:.85rem;display:block}
   ul.resp{list-style:none;padding:0;margin:8px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
   ul.resp li{border:1px solid var(--bd);border-radius:8px;padding:6px 10px;background:var(--card)}
-  ul.resp li.marcada b{color:var(--ok)} ul.resp li.duvida,ul.resp li.dupla{border-color:var(--dv)} ul.resp li.duvida b,ul.resp li.dupla b{color:var(--dv)}
+  ul.resp li.marcada b{color:var(--ok)}
+  ul.resp li.duvida,ul.resp li.dupla{border:2px solid var(--dv);background:color-mix(in srgb,var(--dv) 14%,var(--card))}
+  ul.resp li.duvida b,ul.resp li.dupla b{color:var(--dv)}
   ul.resp li.branco{color:var(--mut)}
   ul.resp small{color:var(--mut);display:block;font-size:.75rem}
   .tempos{color:var(--mut);font-size:.85rem;margin-top:8px}
   select{font-size:1rem;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--fg);max-width:100%}
   .leg{font-size:.8rem;color:var(--mut)} .leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 10px;vertical-align:middle}
+  .duvidas{color:var(--dv);font-weight:600}
+  /* modo ao vivo */
+  #palco{--ar:.5625;position:relative;margin:0 auto;width:100%;max-width:calc(74vh * var(--ar));background:#000;border-radius:12px;overflow:hidden;aspect-ratio:var(--ar)}
+  #video,#guia{position:absolute;inset:0;width:100%;height:100%}
+  #video{object-fit:fill}
+  #dica{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;text-align:center;font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65));font-size:1.1rem}
+  #perf{position:absolute;left:6px;top:6px;font:11px ui-monospace,monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:6px}
+  .barra{display:flex;gap:8px;justify-content:space-between;align-items:center;margin:8px 0;flex-wrap:wrap}
+  .mini{padding:8px 12px;font-size:.9rem}
+  footer{color:var(--mut);font-size:.78rem;text-align:center;margin:18px 0 0}
   [hidden]{display:none!important}
 </style>
+<script src="erro.js"></script>
+<script src="version.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/barcode-detector@3.0.8/dist/iife/polyfill.min.js" crossorigin="anonymous"></script>
 <script src="omr.js"></script>
 <script src="foto.js"></script>
+<script src="resultado.js"></script>
+<script src="vivo.js"></script>
 </head>
 <body>
 <main>
   <h1>Gabarito — leitor de cartões</h1>
-  <p class="sub">Protótipo v0 · a foto é lida neste aparelho e nunca é enviada nem guardada.</p>
+  <p class="sub">A imagem é lida neste aparelho e nunca é enviada nem guardada.</p>
+  <div id="avisos"></div>
 
-  <div class="botoes">
-    <label class="btn primario">Fotografar cartão
-      <input id="camera" type="file" accept="image/*" capture="environment"></label>
-    <label class="btn">Escolher imagem
-      <input id="arquivo" type="file" accept="image/*"></label>
-  </div>
+  <!-- início: ligar a câmera (ao vivo) ou usar uma foto (plano B) -->
+  <section id="telaInicio">
+    <div class="botoes"><button class="btn primario" id="ligar" type="button">Ligar câmera (leitura ao vivo)</button></div>
+    <div class="aviso erro" id="camErr" hidden></div>
+    <p class="sub">Aponte a câmera para o cartão: o leitor percebe sozinho, lê e apita. Se a câmera não funcionar, use a foto:</p>
+    <div class="botoes">
+      <label class="btn">Fotografar cartão <input id="camera" type="file" accept="image/*" capture="environment"></label>
+      <label class="btn">Escolher imagem <input id="arquivo" type="file" accept="image/*"></label>
+    </div>
+  </section>
 
+  <!-- ao vivo -->
+  <section id="telaVivo" hidden>
+    <div id="palco"><video id="video" playsinline muted autoplay></video><canvas id="guia"></canvas><div id="perf" hidden></div><div id="dica">Aponte para o cartão</div></div>
+    <div class="barra">
+      <span>
+        <button class="btn mini" id="somBtn" type="button" aria-label="Som">🔊</button>
+        <button class="btn mini" id="lanterna" type="button" hidden>🔦 Lanterna</button>
+        <button class="btn mini" id="perfBtn" type="button" aria-label="Desempenho">⏱</button>
+      </span>
+      <label class="btn mini">Usar foto <input id="camera2" type="file" accept="image/*" capture="environment"></label>
+    </div>
+  </section>
+
+  <!-- plano B (foto): escolher o molde quando o QR não foi lido -->
   <div id="seletor" hidden>
     <div class="aviso" id="avisoQR"></div>
     <label>Molde da prova: <select id="molde"></select></label>
     <button class="btn" id="lerMolde" type="button">Ler com este molde</button>
   </div>
 
-  <div id="avisos"></div>
+  <!-- resultado (foto congelada com o desenho, matrícula, prova, lista) -->
   <div id="saida" hidden>
     <div class="id">
       <div><span>Matrícula (do QR)</span><b id="mat">—</b></div>
       <div><span>Prova</span><b id="cod">—</b></div>
       <div><span>Confiança</span><b id="conf">—</b></div>
     </div>
+    <p class="duvidas" id="resumoDuvidas" hidden></p>
     <div class="quadro"><canvas id="tela"></canvas></div>
     <p class="leg"><i style="background:#1f6feb"></i>marcas <i style="background:#12b34a"></i>marcada <i style="background:#f2b705"></i>dúvida/dupla <i style="background:#888"></i>vazia</p>
-    <button class="btn" id="binaria" type="button">Ver imagem binária</button>
+    <div class="botoes" id="acoesVivo"><button class="btn ok" id="confirmar" type="button">Confirmar</button><button class="btn primario" id="lerDeNovo" type="button">Ler de novo</button></div>
+    <div class="botoes" id="voltarFoto"><button class="btn primario" id="voltar" type="button">Voltar</button></div>
+    <button class="btn mini" id="binaria" type="button">Ver imagem binária</button>
     <ul class="resp" id="lista"></ul>
     <div class="tempos" id="tempos"></div>
   </div>
+  <footer id="rodape"></footer>
 </main>
 <script>
 // Estado só em memória (nada vai para localStorage/IndexedDB; nenhuma imagem é enviada).
-let atual = null;   // {cOMR, cQR, qr, res, mostrandoBinaria}
 const $ = (id) => document.getElementById(id);
+let atualFoto = null;   // plano B: {cOMR, cQR, qr, tDecod, tQR}
 
-function avisos(lista, erro) {
-  $("avisos").innerHTML = "";
-  for (const a of lista) { const d = document.createElement("div"); d.className = "aviso" + (erro ? " erro" : ""); d.textContent = a; $("avisos").appendChild(d); }
-}
+$("rodape").textContent = `Versão ${APP_VERSAO} · ${APP_DATA} · a imagem não sai do aparelho`;
 
 async function novaFoto(arquivo) {
   if (!arquivo) return;
-  avisos(["Lendo…"]); $("saida").hidden = true; $("seletor").hidden = true;
+  Resultado.avisos(["Lendo…"]); Resultado.esconder(); $("seletor").hidden = true;
+  Vivo.parar(); $("telaInicio").hidden = true;
   try {
     const t0 = performance.now();
     const { cQR, cOMR } = await Foto.carregar(arquivo);
-    const tDecod = performance.now() - t0;
-    const t1 = performance.now();
+    const tDecod = performance.now() - t0, t1 = performance.now();
     let qr = null, aviso = null;
     try { qr = await Foto.lerQR(cQR, cOMR); } catch (e) { aviso = String(e.message || e); }
-    const tQR = performance.now() - t1;
-    atual = { cOMR, cQR, qr, tDecod, tQR };
+    atualFoto = { cOMR, cQR, qr, tDecod, tQR: performance.now() - t1 };
     if (qr && !qr.invalido) {
       const molde = await Foto.moldePorCodigo(qr.codigo);
-      if (molde) return processar(molde, qr);
+      if (molde) return processarFoto(molde, qr);
       aviso = `Não há molde para a prova “${qr.codigo}” (moldes/${qr.codigo}_molde.json). Escolha outro molde abaixo, se for o caso.`;
-    } else if (!aviso) {
-      aviso = qr && qr.invalido ? "O QR lido não é de um cartão do Gabarito." : "QR não encontrado na foto.";
-    }
+    } else if (!aviso) aviso = qr && qr.invalido ? "O QR lido não é de um cartão do Gabarito." : "QR não encontrado na foto.";
     await mostrarSeletor(aviso);
   } catch (e) {
-    avisos(["Não consegui abrir a foto: " + (e.message || e)], true);
+    Resultado.avisos(["Não consegui abrir a foto: " + (e.message || e)], true); $("voltarFoto").hidden = false; $("telaInicio").hidden = false;
   }
 }
 
 async function mostrarSeletor(aviso) {
-  avisos([]);
+  Resultado.avisos([]);
   $("avisoQR").textContent = aviso + " A leitura ainda pode seguir se você escolher o molde (a orientação será inferida pelas marcas).";
   const sel = $("molde"); sel.innerHTML = "";
   const lista = await Foto.listaMoldes();
-  if (!lista.length) { sel.innerHTML = "<option value=''>(nenhum molde em moldes/)</option>"; }
+  if (!lista.length) sel.innerHTML = "<option value=''>(nenhum molde em moldes/)</option>";
   for (const c of lista) { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); }
   $("lerMolde").disabled = !lista.length;
   $("seletor").hidden = false;
+  $("telaInicio").hidden = false;
 }
 
-async function processar(molde, qr) {
-  const { cOMR } = atual;
+async function processarFoto(molde, qr) {
   await new Promise(r => setTimeout(r, 0));   // deixa a tela mostrar "Lendo…"
-  const res = OMR.ler(Foto.imageData(cOMR), molde, qr && !qr.invalido ? qr : null, { guardarBinaria: true });
-  atual.res = res; atual.qr = qr; atual.molde = molde; atual.mostrandoBinaria = false;
-  mostrar();
+  const res = OMR.ler(Foto.imageData(atualFoto.cOMR), molde, qr && !qr.invalido ? qr : null, { guardarBinaria: true });
+  Resultado.mostrar({ cOMR: atualFoto.cOMR, res, qr, molde, tDecod: atualFoto.tDecod, tQR: atualFoto.tQR }, { vivo: false });
 }
 
-function mostrar() {
-  const { cOMR, res, qr, molde } = atual;
-  const avs = (res.avisos || []).slice();
-  if (res.erro) avs.unshift("NÃO LI O CARTÃO: " + res.erro);
-  avisos(avs, !!res.erro);
-  $("saida").hidden = false;
-  $("mat").textContent = qr && !qr.invalido ? (qr.matricula || "(cartão genérico: sem matrícula)") : "—";
-  $("cod").textContent = qr && !qr.invalido ? qr.codigo : (molde ? molde.prova.codigo + " (escolhido)" : "—");
-  $("conf").textContent = res.ok ? `mín. ${(res.confianca.minima * 100).toFixed(0)}% · média ${(res.confianca.media * 100).toFixed(0)}%` : "—";
-  desenhar();
-  const ul = $("lista"); ul.innerHTML = "";
-  for (const r of res.respostas || []) {
-    const li = document.createElement("li"); li.className = r.estado;
-    const q = document.createElement("span"); q.textContent = `Q${r.questao}: `;
-    const b = document.createElement("b"); b.textContent = Foto.descricao(r);
-    const s = document.createElement("small"); s.textContent = Object.entries(r.valores).map(([l, v]) => `${l} ${Math.round(v * 100)}%`).join(" · ");
-    li.append(q, b, s); ul.appendChild(li);
-  }
-  const t = res.tempos_ms || {};
-  $("tempos").textContent = `Tempo total da leitura: ${t.total ?? "—"} ms (decodificar foto ${Math.round(atual.tDecod)} ms · QR ${Math.round(atual.tQR)} ms · ` +
-    Object.entries(t).filter(([k]) => k !== "total").map(([k, v]) => `${k} ${v} ms`).join(" · ") + ")";
-}
+function voltarAoInicio() { Resultado.esconder(); Resultado.avisos([]); atualFoto = null; $("seletor").hidden = true; $("telaInicio").hidden = false; }
 
-function desenhar() {
-  const { cOMR, res, mostrandoBinaria } = atual, cv = $("tela");
-  cv.width = cOMR.width; cv.height = cOMR.height;
-  const ctx = cv.getContext("2d");
-  if (mostrandoBinaria && res.binaria) {
-    const im = ctx.createImageData(cv.width, cv.height), ink = res.binaria.ink, ink2 = res.binaria.inkMarcas;
-    for (let i = 0; i < ink.length; i++) { const v = ink[i] ? 0 : 255, o = i * 4; im.data[o] = v; im.data[o + 1] = ink2[i] && !ink[i] ? 120 : v; im.data[o + 2] = v; im.data[o + 3] = 255; }
-    ctx.putImageData(im, 0, 0);
-  } else ctx.drawImage(cOMR, 0, 0);
-  Foto.sobrepor(ctx, res, 1);
-  $("binaria").textContent = mostrandoBinaria ? "Ver foto" : "Ver imagem binária";
-}
-
-$("camera").addEventListener("change", e => { novaFoto(e.target.files[0]); e.target.value = ""; });
-$("arquivo").addEventListener("change", e => { novaFoto(e.target.files[0]); e.target.value = ""; });
-$("binaria").addEventListener("click", () => { atual.mostrandoBinaria = !atual.mostrandoBinaria; desenhar(); });
+for (const id of ["camera", "camera2", "arquivo"]) $(id).addEventListener("change", e => { novaFoto(e.target.files[0]); e.target.value = ""; });
+$("binaria").addEventListener("click", () => Resultado.alternarBinaria());
+$("voltar").addEventListener("click", voltarAoInicio);
 $("lerMolde").addEventListener("click", async () => {
-  const c = $("molde").value; if (!c || !atual) return;
-  const molde = await Foto.moldePorCodigo(c); if (!molde) return avisos(["Molde não encontrado."], true);
-  $("seletor").hidden = true; atual.qr = null; processar(molde, null);
+  const c = $("molde").value; if (!c || !atualFoto) return;
+  const molde = await Foto.moldePorCodigo(c); if (!molde) return Resultado.avisos(["Molde não encontrado."], true);
+  $("seletor").hidden = true; processarFoto(molde, null);
 });
+Vivo.iniciarPagina();
 </script>
 </body>
 </html>

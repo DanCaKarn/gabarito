@@ -42,6 +42,7 @@ try {
   else {
     const p = (o) => `${o.ok}/${o.n} (${(100 * o.ok / o.n).toFixed(0)}%)`.padEnd(12);
     console.log(`TOTAL ${p(resultado.total)} críticos(letra errada)=${resultado.total.critico} leves=${resultado.total.leve}${resultado.semqr ? "  [sem QR]" : ""}`);
+    if (resultado.rapida) { const r = resultado.rapida; console.log(`\nDetecção rápida (ao vivo): ${r.ok}/${r.n} corretas, ${(r.ms / Math.max(1, r.n)).toFixed(1)} ms/imagem${r.falhas.length ? "\n  falhas: " + r.falhas.join("; ") : ""}`); }
     console.log("\nPor tipo de marcação:");
     for (const [k, o] of Object.entries(resultado.por_tipo)) console.log(`  ${k.padEnd(8)} ${p(o)} críticos=${o.critico} leves=${o.leve}`);
     console.log("\nPor tipo de foto:");

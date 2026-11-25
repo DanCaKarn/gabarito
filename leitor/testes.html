@@ -37,6 +37,7 @@ const TIPOS = ["cheia", "x", "meia", "dupla", "branco", "recusa"];
 async function main() {
   const idx = await (await fetch("../testes/sinteticos/index.json")).json();
   const porTipo = {}, porCaso = {}, linhas = [], criticos = [], dist = {};
+  const rapida = { n: 0, ok: 0, ms: 0, falhas: [] };
   let tot = { n: 0, ok: 0, critico: 0, leve: 0 };
   const somar = (obj, chave, a) => { const o = obj[chave] = obj[chave] || { n: 0, ok: 0, critico: 0, leve: 0 }; o.n++; if (a.ok) o.ok++; if (a.critico) o.critico++; if (a.leve) o.leve++; };
   for (const item of idx) {
@@ -51,6 +52,7 @@ async function main() {
     let res;
     if (!molde) res = { ok: false, erro: "molde não encontrado/QR não lido", respostas: [], marcas: [], bolhas: [], avisos: [], tempos_ms: {} };
     else res = OMR.ler(Foto.imageData(cOMR), molde, qr && !qr.invalido ? qr : null);
+    if (molde) { const d = OMR.detectarMarcas(Foto.imageData(cOMR), molde); const e = verdade.negativo ? !d.ok : d.ok; rapida.n++; rapida.ok += e; rapida.ms += d.ms; if (!e) rapida.falhas.push(`${item.imagem}: ${d.achou ? 'dica=' + d.dica + ' área=' + d.areaRel.toFixed(2) : 'marcas não achadas'}`); }
     if (verdade.negativo) {   // negativo: o leitor deve RECUSAR com erro claro (nunca ler no chute)
       const recusou = !res.ok && !!res.erro;
       somar(porTipo, "recusa", { ok: recusou, critico: res.ok, leve: false }); for (const t of verdade.casos) somar(porCaso, t, { ok: recusou, critico: res.ok, leve: false });
@@ -83,13 +85,14 @@ async function main() {
     document.getElementById("grade").appendChild(div);
   }
   const pct = (o) => `${o.ok}/${o.n} (${(100 * o.ok / o.n).toFixed(0)}%)`;
-  const resumo = { total: tot, por_tipo: porTipo, por_caso: porCaso, criticos, imagens: linhas, distribuicao: dist, constantes: OMR.C, semqr: SEM_QR };
+  const resumo = { total: tot, por_tipo: porTipo, por_caso: porCaso, criticos, imagens: linhas, distribuicao: dist, rapida, constantes: OMR.C, semqr: SEM_QR };
   const h = [`<h2>Total: ${pct(tot)} — letras erradas (críticas): ${tot.critico}, falhas leves: ${tot.leve}</h2>`];
   h.push("<h3>Por tipo de marcação</h3><table><tr><th>tipo</th><th>acerto</th><th>críticos</th><th>leves</th></tr>");
   for (const t of TIPOS) if (porTipo[t]) h.push(`<tr class="${porTipo[t].critico ? "mal" : porTipo[t].ok === porTipo[t].n ? "ok" : "leve"}"><td>${t}</td><td>${pct(porTipo[t])}</td><td>${porTipo[t].critico}</td><td>${porTipo[t].leve}</td></tr>`);
   h.push("</table><h3>Por tipo de foto</h3><table><tr><th>caso</th><th>acerto</th><th>críticos</th></tr>");
   for (const [k, o] of Object.entries(porCaso)) h.push(`<tr class="${o.critico ? "mal" : o.ok === o.n ? "ok" : "leve"}"><td>${k}</td><td>${pct(o)}</td><td>${o.critico}</td></tr>`);
   h.push("</table>");
+  h.push(`<h3>Detecção rápida das marcas (modo ao vivo, ${OMR.C.VIVO_LADO} px)</h3><p>${rapida.ok}/${rapida.n} corretas (negativas recusadas, positivas aceitas) · ${(rapida.ms / Math.max(1, rapida.n)).toFixed(1)} ms por imagem</p>`);
   document.getElementById("resumo").innerHTML = h.join("");
   document.getElementById("estado").textContent = "Pronto.";
   const out = document.getElementById("resultado"); out.textContent = JSON.stringify(resumo, null, 1); if (AUTO) out.hidden = false;
