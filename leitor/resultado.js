@@ -34,6 +34,14 @@ const Resultado = (() => {
     $("acoesVivo").hidden = !(opc && opc.vivo); $("voltarFoto").hidden = !!(opc && opc.vivo);
     $("mat").textContent = qr && !qr.invalido ? (qr.matricula || "(cartão genérico: sem matrícula)") : "—";
     $("cod").textContent = qr && !qr.invalido ? qr.codigo : (molde ? molde.prova.codigo + " (escolhido)" : "—");
+    // correção (modo de teste): nota grande e ✓/✗; sem matrícula no QR, pede antes de confirmar
+    const nota = Turma.apresentar(res, qr, molde), c = nota && nota.correcao;
+    $("nota").hidden = !res.ok;
+    $("nota").className = c ? "" : "sem";
+    $("nota").textContent = c ? `${c.acertos}/${c.total}` : "sem gabarito para esta prova";
+    const semMat = res.ok && !(qr && !qr.invalido && qr.matricula);
+    $("pedeMat").hidden = !semMat; $("matManual").value = "";
+    document.body.classList.add("com-resultado");
     $("conf").textContent = res.ok ? `mín. ${(res.confianca.minima * 100).toFixed(0)}% · média ${(res.confianca.media * 100).toFixed(0)}%` : "—";
     desenhar();
     const ul = $("lista"); ul.innerHTML = "";
@@ -42,7 +50,13 @@ const Resultado = (() => {
       const q = document.createElement("span"); q.textContent = `Q${r.questao}: `;
       const b = document.createElement("b"); b.textContent = Foto.descricao(r);
       const s = document.createElement("small"); s.textContent = Object.entries(r.valores).map(([l, v]) => `${l} ${Math.round(v * 100)}%`).join(" · ");
-      li.append(q, b, s); ul.appendChild(li);
+      li.append(q, b, s);
+      if (c) {
+        const i = res.respostas.slice().sort((a, b) => a.questao - b.questao).indexOf(r), certa = c.certas[i];
+        const v = document.createElement("em"); v.className = certa ? "certa" : "errada"; v.textContent = certa ? "✓" : `✗ (${nota.chave[i]})`;
+        li.insertBefore(v, s);
+      }
+      ul.appendChild(li);
     }
     const t = res.tempos_ms || {};
     $("tempos").textContent = `Tempo total da leitura: ${t.total ?? "—"} ms (${atual.tDecod != null ? "obter imagem " + Math.round(atual.tDecod) + " ms · " : ""}QR ${Math.round(atual.tQR || 0)} ms · ` +
@@ -53,7 +67,7 @@ const Resultado = (() => {
   }
 
   function alternarBinaria() { if (!atual) return; atual.binaria = !atual.binaria; desenhar(); }
-  function esconder() { atual = null; $("saida").hidden = true; $("tela").width = 1; $("lista").innerHTML = ""; }   // solta a imagem
+  function esconder() { atual = null; Turma.descartar(); document.body.classList.remove("com-resultado"); $("saida").hidden = true; $("tela").width = 1; $("lista").innerHTML = ""; }   // solta a imagem
   const chave = () => (atual && atual.qr && !atual.qr.invalido) ? atual.qr.codigo + "|" + atual.qr.matricula : null;
 
   return { mostrar, esconder, avisos, alternarBinaria, chave };

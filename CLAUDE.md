@@ -66,3 +66,11 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
 - `?debug=1`: mosaico dos 4 recortes + motivo de cada canto falhar (+ tamanhos de vídeo/palco/tela); `?perf=1`: checagens/s.
 - Teste com tamanhos de vídeo e tela de celular: `video_teste.py --tam 1080x1920` + `rodar_vivo.mjs --gum livre --viewport 390x844x3`.
 - `LIMIAR_SEGUNDA` (0,40): 'marcada' exige a 2ª bolha abaixo disto; uma dupla com uma bolha falhada vira dúvida, nunca letra.
+
+### Correção no leitor (etapa 5, MODO DE TESTE no aparelho do Daniel)
+- No sistema final quem corrige é a PLANILHA. `leitor/corrigir.js` (puro) + `leitor/turma.js` (telas) existem para o teste em sala.
+- Exceção à regra de armazenamento, só em `turma.js`: localStorage guarda a chave por prova (`gab-chave-<codigo>`) e a lista
+  (`gab-lista`: matrícula, prova, respostas, acertos, total, hora). NUNCA nomes nem imagens.
+- O CSV só sai do aparelho por ação do usuário ("Exportar CSV"). A chave de correção não vai para o git nem para `provas/`.
+- Dupla, em branco e dúvida contam como erro. Identidade na lista = prova + matrícula. Teste: `node --test tests/corrigir.test.mjs`.
+

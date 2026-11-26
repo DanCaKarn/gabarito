@@ -223,6 +223,7 @@ const Vivo = (() => {
   }
 
   function confirmar() {   // volta a ler; o mesmo cartão só é lido de novo depois que as marcas sumirem por ≥ 1 s
+    if (!Turma.confirmar()) return;   // falta a matrícula (cartão genérico): fica no resultado
     bloqueio = atual ? atual.chave : null; log("confirmou");
     voltar();
   }

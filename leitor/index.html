@@ -45,6 +45,24 @@
   #perf{position:absolute;left:6px;top:6px;font:11px ui-monospace,monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:6px}
   .barra{display:flex;gap:8px;justify-content:space-between;align-items:center;margin:8px 0;flex-wrap:wrap}
   .mini{padding:8px 12px;font-size:.9rem}
+  .topo{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:0 0 10px;flex-wrap:wrap}
+  #lidos{font-weight:700;font-size:1.1rem}
+  body.com-resultado .topo .btn{display:none}
+  #nota{font-size:3.4rem;font-weight:800;text-align:center;margin:4px 0;font-variant-numeric:tabular-nums}
+  #nota.sem{font-size:1.05rem;color:var(--dv)}
+  #pedeMat{border:2px solid var(--dv);border-radius:12px;padding:10px 12px;margin:8px 0}
+  input[type=text]{font:600 1.3rem ui-monospace,Menlo,monospace;width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--fg);margin-top:6px}
+  #textoChave{text-transform:uppercase;letter-spacing:.15em}
+  ul.resp em{font-style:normal;font-weight:800;float:right} em.certa{color:var(--ok)} em.errada{color:var(--er)}
+  #grade{margin:10px 0}
+  #grade .q{display:flex;gap:8px;align-items:center;margin:6px 0}
+  #grade .q span{width:2em;text-align:right;font-variant-numeric:tabular-nums;color:var(--mut)}
+  .alt{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font-size:1.05rem;font-weight:700}
+  .alt.sel{background:var(--az);border-color:var(--az);color:#fff}
+  #copiar{border:1px solid var(--bd);border-radius:12px;padding:10px 12px} #copiarLista label{display:block;padding:8px 0}
+  #tabela{list-style:none;padding:0}
+  #tabela li{display:grid;grid-template-columns:1fr auto;gap:0 10px;border-bottom:1px solid var(--bd);padding:8px 0}
+  #tabela li b{font-family:ui-monospace,Menlo,monospace} #tabela li small{color:var(--mut);grid-column:1/-1}
   footer{color:var(--mut);font-size:.78rem;text-align:center;margin:18px 0 0}
   [hidden]{display:none!important}
 </style>
@@ -53,13 +71,16 @@
 <script src="https://cdn.jsdelivr.net/npm/barcode-detector@3.0.8/dist/iife/polyfill.min.js" crossorigin="anonymous"></script>
 <script src="omr.js"></script>
 <script src="foto.js"></script>
+<script src="corrigir.js"></script>
+<script src="turma.js"></script>
 <script src="resultado.js"></script>
 <script src="vivo.js"></script>
 </head>
 <body>
 <main>
   <h1>Gabarito — leitor de cartões</h1>
-  <p class="sub">A imagem é lida neste aparelho e nunca é enviada nem guardada.</p>
+  <p class="sub">A imagem é lida neste aparelho e nunca é enviada nem guardada. Correção em modo de teste.</p>
+  <div class="topo"><span id="lidos">Lidos: 0</span><span><button class="btn mini" id="gabBtn" type="button">Gabarito</button> <button class="btn mini" id="listaBtn" type="button">Lista / CSV</button></span></div>
   <div id="avisos"></div>
 
   <!-- início: ligar a câmera (ao vivo) ou usar uma foto (plano B) -->
@@ -71,6 +92,25 @@
       <label class="btn">Fotografar cartão <input id="camera" type="file" accept="image/*" capture="environment"></label>
       <label class="btn">Escolher imagem <input id="arquivo" type="file" accept="image/*"></label>
     </div>
+  </section>
+
+  <section id="painelGab" hidden>
+    <h2>Gabarito</h2>
+    <label>Prova: <select id="provaGab"></select></label>
+    <div class="aviso" id="msgGab"></div>
+    <label>Chave (ex.: BDACABCDAB)<input type="text" id="textoChave" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+    <div id="grade"></div>
+    <div class="botoes"><button class="btn ok" id="salvarChave" type="button">Salvar</button><button class="btn" id="copiarBtn" type="button">Copiar para outras provas</button></div>
+    <div id="copiar" hidden><div id="copiarLista"></div><button class="btn primario" id="copiarOk" type="button">Copiar para as marcadas</button></div>
+    <div class="botoes"><button class="btn fechar" type="button">Fechar</button></div>
+  </section>
+
+  <section id="painelLista" hidden>
+    <h2>Cartões confirmados</h2>
+    <p class="sub">Ficam só neste aparelho (matrícula, prova, respostas e nota; sem nomes). O CSV só sai quando você exporta.</p>
+    <div class="botoes"><button class="btn primario" id="exportar" type="button">Exportar CSV</button><button class="btn" id="limpar" type="button">Limpar lista</button></div>
+    <ul id="tabela"></ul>
+    <div class="botoes"><button class="btn fechar" type="button">Fechar</button></div>
   </section>
 
   <!-- ao vivo -->
@@ -100,11 +140,13 @@
       <div><span>Prova</span><b id="cod">—</b></div>
       <div><span>Confiança</span><b id="conf">—</b></div>
     </div>
+    <div id="nota" hidden></div>
+    <div id="pedeMat" hidden><label>Cartão sem matrícula: digite a matrícula<input type="text" id="matManual" inputmode="numeric" autocomplete="off" maxlength="20"></label></div>
     <p class="duvidas" id="resumoDuvidas" hidden></p>
+    <div class="botoes" id="acoesVivo"><button class="btn ok" id="confirmar" type="button">Confirmar</button><button class="btn primario" id="lerDeNovo" type="button">Ler de novo</button></div>
+    <div class="botoes" id="voltarFoto"><button class="btn ok" id="confirmarFoto" type="button">Confirmar</button><button class="btn primario" id="voltar" type="button">Voltar sem gravar</button></div>
     <div class="quadro"><canvas id="tela"></canvas></div>
     <p class="leg"><i style="background:#1f6feb"></i>marcas <i style="background:#12b34a"></i>marcada <i style="background:#f2b705"></i>dúvida/dupla <i style="background:#888"></i>vazia</p>
-    <div class="botoes" id="acoesVivo"><button class="btn ok" id="confirmar" type="button">Confirmar</button><button class="btn primario" id="lerDeNovo" type="button">Ler de novo</button></div>
-    <div class="botoes" id="voltarFoto"><button class="btn primario" id="voltar" type="button">Voltar</button></div>
     <button class="btn mini" id="binaria" type="button">Ver imagem binária</button>
     <ul class="resp" id="lista"></ul>
     <div class="tempos" id="tempos"></div>
@@ -112,7 +154,7 @@
   <footer id="rodape"></footer>
 </main>
 <script>
-// Estado só em memória (nada vai para localStorage/IndexedDB; nenhuma imagem é enviada).
+// Nenhuma imagem é guardada nem enviada. Só turma.js usa localStorage (gabarito e lista: sem nomes, sem imagens).
 const $ = (id) => document.getElementById(id);
 let atualFoto = null;   // plano B: {cOMR, cQR, qr, tDecod, tQR}
 
@@ -121,7 +163,7 @@ $("rodape").textContent = `Versão ${APP_VERSAO} · ${APP_DATA} · a imagem não
 async function novaFoto(arquivo) {
   if (!arquivo) return;
   Resultado.avisos(["Lendo…"]); Resultado.esconder(); $("seletor").hidden = true;
-  Vivo.parar(); $("telaInicio").hidden = true;
+  Vivo.parar(); Turma.fechar(); $("telaInicio").hidden = true;
   try {
     const t0 = performance.now();
     const { cQR, cOMR } = await Foto.carregar(arquivo);
@@ -156,6 +198,7 @@ async function processarFoto(molde, qr) {
   await new Promise(r => setTimeout(r, 0));   // deixa a tela mostrar "Lendo…"
   const res = OMR.ler(Foto.imageData(atualFoto.cOMR), molde, qr && !qr.invalido ? qr : null, { guardarBinaria: true });
   Resultado.mostrar({ cOMR: atualFoto.cOMR, res, qr, molde, tDecod: atualFoto.tDecod, tQR: atualFoto.tQR }, { vivo: false });
+  $("confirmarFoto").hidden = !res.ok;
 }
 
 function voltarAoInicio() { Resultado.esconder(); Resultado.avisos([]); atualFoto = null; $("seletor").hidden = true; $("telaInicio").hidden = false; }
@@ -163,11 +206,13 @@ function voltarAoInicio() { Resultado.esconder(); Resultado.avisos([]); atualFot
 for (const id of ["camera", "camera2", "arquivo"]) $(id).addEventListener("change", e => { novaFoto(e.target.files[0]); e.target.value = ""; });
 $("binaria").addEventListener("click", () => Resultado.alternarBinaria());
 $("voltar").addEventListener("click", voltarAoInicio);
+$("confirmarFoto").addEventListener("click", () => { if (Turma.confirmar()) voltarAoInicio(); });
 $("lerMolde").addEventListener("click", async () => {
   const c = $("molde").value; if (!c || !atualFoto) return;
   const molde = await Foto.moldePorCodigo(c); if (!molde) return Resultado.avisos(["Molde não encontrado."], true);
   $("seletor").hidden = true; processarFoto(molde, null);
 });
+Turma.iniciar();
 Vivo.iniciarPagina();
 </script>
 </body>
