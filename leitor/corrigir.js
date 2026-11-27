@@ -56,13 +56,36 @@
     return /[",\r\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
-  // colunas: matricula,prova,Q1..Qn,acertos,total
-  function csv(lista) {
-    const n = lista.reduce((m, r) => Math.max(m, r.respostas.length), 0);
-    const cab = ["matricula", "prova"].concat(Array.from({ length: n }, (_, i) => "Q" + (i + 1)), ["acertos", "total"]);
-    const linhas = lista.map((r) => [r.matricula, r.prova].concat(Array.from({ length: n }, (_, i) => r.respostas[i]), [r.acertos, r.total]).map(campo).join(","));
-    return [cab.join(",")].concat(linhas).join("\r\n") + "\r\n";
+  // marca codificada × letra certa: "acerto" | "erro" (outra letra) | "nula" (em branco, dupla, dúvida) | "neutra" (sem chave)
+  function situacao(marca, certa) {
+    if (!certa) return "neutra";
+    if (marca === certa) return "acerto";
+    return marca === "" || marca === "?" || marca.includes("+") ? "nula" : "erro";
   }
 
-  return { lerChave, codificar, corrigir, matriculaValida, indice, gravar, recalcular, csv };
+  /* colunas: matricula,prova,Q1..Qn,C1..Cn,acertos,total — C = 1 (acertou) ou 0; vazio sem chave.
+   * chaveDe(prova) → array de letras ou null. No fim, "% acerto" (porcentagem inteira por questão, só nas colunas C):
+   * uma linha se a lista tem uma prova; uma por prova (código na coluna `prova`) se tem várias. Prova sem chave não ganha linha. */
+  function csv(lista, chaveDe) {
+    const n = lista.reduce((m, r) => Math.max(m, r.respostas.length), 0);
+    const seq = (f) => Array.from({ length: n }, (_, i) => f(i));
+    const chaveDo = (r) => { const c = chaveDe && chaveDe(r.prova); return c && c.length === r.respostas.length ? c : null; };
+    const cab = ["matricula", "prova"].concat(seq((i) => "Q" + (i + 1)), seq((i) => "C" + (i + 1)), ["acertos", "total"]);
+    const soma = new Map();   // prova → {alunos, certas[]}
+    const linhas = lista.map((r) => {
+      const chave = chaveDo(r), certas = chave ? corrigir(r.respostas, chave).certas : null;
+      if (certas) {
+        if (!soma.has(r.prova)) soma.set(r.prova, { alunos: 0, certas: certas.map(() => 0) });
+        const s = soma.get(r.prova); s.alunos++; certas.forEach((c, i) => { s.certas[i] += c ? 1 : 0; });
+      }
+      return [r.matricula, r.prova].concat(seq((i) => r.respostas[i]), seq((i) => certas && i < certas.length ? (certas[i] ? 1 : 0) : ""), [r.acertos, r.total]);
+    });
+    const varias = new Set(lista.map((r) => r.prova)).size > 1;
+    for (const [prova, s] of soma) {
+      linhas.push(["% acerto", varias ? prova : ""].concat(seq(() => ""), seq((i) => i < s.certas.length ? Math.round(100 * s.certas[i] / s.alunos) : ""), ["", ""]));
+    }
+    return [cab].concat(linhas).map((l) => l.map(campo).join(",")).join("\r\n") + "\r\n";
+  }
+
+  return { lerChave, codificar, corrigir, matriculaValida, indice, gravar, recalcular, situacao, csv };
 });

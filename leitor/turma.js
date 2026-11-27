@@ -160,16 +160,37 @@ const Turma = (() => {
 
   // ---------- lista ----------
   function abrirLista() { abrir("painelLista"); desenharLista(); }
+  // texto de uma questão no detalhe: "Q2: C ✗ (certa: A)"
+  function textoQuestao(i, marca, certa) {
+    const m = marca === "" ? "em branco" : marca === "?" ? "dúvida" : marca.includes("+") ? "dupla " + marca : marca;
+    if (!certa) return `Q${i + 1}: ${m}`;
+    return `Q${i + 1}: ${m} ${marca === certa ? "✓" : `✗ (certa: ${certa})`}`;
+  }
+  const NOMES = { acerto: "acertou", erro: "errou", nula: "em branco, dupla ou dúvida", neutra: "sem gabarito" };
   function desenharLista() {
     const t = $("tabela"); t.innerHTML = "";
     $("exportar").disabled = $("limpar").disabled = !lista.length;
+    $("legQ").hidden = !lista.length;
     if (!lista.length) { t.textContent = "Nenhum cartão confirmado ainda."; return; }
     for (const r of lista.slice().reverse()) {
-      const li = document.createElement("li");
+      const chave = chaveDe(r.prova), certa = (i) => chave && chave.length === r.respostas.length ? chave[i] : null;
+      const li = document.createElement("li"), det = document.createElement("details"), cab = document.createElement("summary");
       const m = document.createElement("b"); m.textContent = r.matricula;
       const n = document.createElement("strong"); n.textContent = r.acertos == null ? "sem nota" : `${r.acertos}/${r.total}`;
+      const q = document.createElement("span"); q.className = "quads";
+      r.respostas.forEach((marca, i) => {
+        const x = document.createElement("i"), sit = Corrigir.situacao(marca, certa(i));
+        x.className = sit; x.title = `Q${i + 1}: ${NOMES[sit]}`; q.appendChild(x);
+      });
+      q.setAttribute("role", "img"); q.setAttribute("aria-label", Array.from(q.children, (x) => x.title).join("; "));
       const s = document.createElement("small"); s.textContent = `${r.prova} · ${new Date(r.hora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-      li.append(m, n, s); t.appendChild(li);
+      cab.append(m, q, n, s);
+      const ul = document.createElement("ul"); ul.className = "detalhe";
+      r.respostas.forEach((marca, i) => {
+        const item = document.createElement("li"); item.className = Corrigir.situacao(marca, certa(i));
+        item.textContent = textoQuestao(i, marca, certa(i)); ul.appendChild(item);
+      });
+      det.append(cab, ul); li.appendChild(det); t.appendChild(li);
     }
   }
   function baixar(arquivo) {
@@ -180,7 +201,7 @@ const Turma = (() => {
     if (!lista.length) return;
     const d = new Date(), p = (x) => String(x).padStart(2, "0");
     const nome = `gabarito_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.csv`;
-    const arquivo = new File(["﻿" + Corrigir.csv(lista)], nome, { type: "text/csv" });
+    const arquivo = new File(["﻿" + Corrigir.csv(lista, chaveDe)], nome, { type: "text/csv" });
     if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
       try { await navigator.share({ files: [arquivo] }); return; }
       catch (e) { if (e && e.name === "AbortError") return; }   // cancelou: não é erro; outro problema: cai no download

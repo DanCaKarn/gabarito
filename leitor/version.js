@@ -3,5 +3,6 @@
 // Versão 5 = a v2 restaurada (commit 839e97d), que funcionou no iPhone. As versões 3 e 4 estão no ramo vivo-rapido.
 // Versão 6 = versão 5 + correção da dupla (LIMIAR_SEGUNDA).
 // Versão 7 = correção no leitor (modo de teste): gabarito, nota, lista da turma e CSV.
-self.APP_VERSAO = 7;
-self.APP_DATA = "26/11/2026";
+// Versão 8 = relatório por questão (quadradinhos na lista; C1..Cn e % acerto no CSV).
+self.APP_VERSAO = 8;
+self.APP_DATA = "27/11/2026";

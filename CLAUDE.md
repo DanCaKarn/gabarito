@@ -73,4 +73,6 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
   (`gab-lista`: matrícula, prova, respostas, acertos, total, hora). NUNCA nomes nem imagens.
 - O CSV só sai do aparelho por ação do usuário ("Exportar CSV"). A chave de correção não vai para o git nem para `provas/`.
 - Dupla, em branco e dúvida contam como erro. Identidade na lista = prova + matrícula. Teste: `node --test tests/corrigir.test.mjs`.
+- CSV: `matricula,prova,Q1..Qn,C1..Cn,acertos,total` (C = 1/0; vazio sem chave) e, no fim, linha `% acerto` (inteiro, só nas
+  colunas C; com mais de uma prova na lista, uma linha por prova, identificada na coluna `prova`).
 

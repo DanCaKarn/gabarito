@@ -61,8 +61,18 @@
   .alt.sel{background:var(--az);border-color:var(--az);color:#fff}
   #copiar{border:1px solid var(--bd);border-radius:12px;padding:10px 12px} #copiarLista label{display:block;padding:8px 0}
   #tabela{list-style:none;padding:0}
-  #tabela li{display:grid;grid-template-columns:1fr auto;gap:0 10px;border-bottom:1px solid var(--bd);padding:8px 0}
-  #tabela li b{font-family:ui-monospace,Menlo,monospace} #tabela li small{color:var(--mut);grid-column:1/-1}
+  #tabela>li{border-bottom:1px solid var(--bd)}
+  #tabela summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 0;cursor:pointer;list-style:none}
+  #tabela summary::-webkit-details-marker{display:none}
+  #tabela summary b{font-family:ui-monospace,Menlo,monospace}
+  #tabela summary strong{margin-left:auto;font-variant-numeric:tabular-nums}
+  #tabela summary small{color:var(--mut);flex-basis:100%}
+  .quads{display:inline-flex;flex-wrap:wrap;gap:2px}
+  .quads i,#legQ i{display:inline-block;width:11px;height:11px;border-radius:2px;border:1px solid transparent}
+  i.acerto{background:var(--ok)} i.erro{background:var(--er)} i.nula{background:#8a949d} i.neutra{border-color:var(--mut)!important}
+  #legQ{font-size:.8rem;color:var(--mut)} #legQ i{margin:0 4px 0 10px;vertical-align:middle}
+  ul.detalhe{list-style:none;margin:0 0 10px;padding:8px 12px;background:var(--card);border-radius:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 12px}
+  ul.detalhe li.acerto{color:var(--ok)} ul.detalhe li.erro{color:var(--er)} ul.detalhe li.nula{color:var(--mut)}
   footer{color:var(--mut);font-size:.78rem;text-align:center;margin:18px 0 0}
   [hidden]{display:none!important}
 </style>
@@ -109,6 +119,8 @@
     <h2>Cartões confirmados</h2>
     <p class="sub">Ficam só neste aparelho (matrícula, prova, respostas e nota; sem nomes). O CSV só sai quando você exporta.</p>
     <div class="botoes"><button class="btn primario" id="exportar" type="button">Exportar CSV</button><button class="btn" id="limpar" type="button">Limpar lista</button></div>
+    <p id="legQ" hidden><i class="acerto"></i>acertou <i class="erro"></i>errou <i class="nula"></i>branco/dupla/dúvida <i class="neutra"></i>sem gabarito</p>
+    <p class="sub">Toque numa linha para ver questão por questão.</p>
     <ul id="tabela"></ul>
     <div class="botoes"><button class="btn fechar" type="button">Fechar</button></div>
   </section>

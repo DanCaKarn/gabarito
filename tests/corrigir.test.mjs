@@ -40,10 +40,33 @@ test("repetida só substitui se pedido; provas diferentes não se misturam", () 
   assert.equal(C.gravar(s.lista, reg("2023000001", ["C"], "outra"), false).lista.length, 2);
 });
 
-test("recalcular com a chave nova e exportar CSV", () => {
-  const l = [reg("2023000001", ["A", "", "A+B"]), reg("2023000002", ["A", "B", "?"]), reg("2023000003", ["A", "B", "C"], "sem-chave")];
-  const n = C.recalcular(l, "teste-mat-10q", ["A", "B", "C"]);
-  assert.deepEqual(n.map((r) => r.acertos), [1, 2, null]);
-  assert.equal(C.csv(n), "matricula,prova,Q1,Q2,Q3,acertos,total\r\n" +
-    "2023000001,teste-mat-10q,A,,A+B,1,3\r\n2023000002,teste-mat-10q,A,B,?,2,3\r\n2023000003,sem-chave,A,B,C,,\r\n");
+test("situação de cada questão", () => {
+  assert.deepEqual([["A", "A"], ["C", "A"], ["", "A"], ["A+B", "A"], ["?", "A"], ["A", null]].map(([m, c]) => C.situacao(m, c)),
+    ["acerto", "erro", "nula", "nula", "nula", "neutra"]);
+});
+
+test("recalcular com a chave nova e exportar CSV com C1..Cn e % acerto (uma prova)", () => {
+  const l = [reg("2023000001", ["A", "", "A+B"]), reg("2023000002", ["A", "B", "?"]), reg("2023000003", ["B", "B", "C"])];
+  const chave = ["A", "B", "C"];
+  const n = C.recalcular(l, "teste-mat-10q", chave);
+  assert.deepEqual(n.map((r) => r.acertos), [1, 2, 2]);
+  assert.equal(C.csv(n, () => chave), "matricula,prova,Q1,Q2,Q3,C1,C2,C3,acertos,total\r\n" +
+    "2023000001,teste-mat-10q,A,,A+B,1,0,0,1,3\r\n" +
+    "2023000002,teste-mat-10q,A,B,?,1,1,0,2,3\r\n" +
+    "2023000003,teste-mat-10q,B,B,C,0,1,1,2,3\r\n" +
+    "% acerto,,,,,67,67,33,,\r\n");
+});
+
+test("CSV com várias provas: uma linha % acerto por prova; sem chave, C vazio e sem linha", () => {
+  const chaves = { p1: ["A", "B"], p2: ["B", "B"] };
+  const chaveDe = (p) => chaves[p] || null;
+  let l = [reg("2023000001", ["A", "B"], "p1"), reg("2023000002", ["A", "B"], "p2"), reg("2023000003", ["A", "C"], "sem-chave")];
+  for (const p of ["p1", "p2", "sem-chave"]) l = C.recalcular(l, p, chaveDe(p));
+  assert.equal(C.csv(l, chaveDe), "matricula,prova,Q1,Q2,C1,C2,acertos,total\r\n" +
+    "2023000001,p1,A,B,1,1,2,2\r\n" +
+    "2023000002,p2,A,B,0,1,1,2\r\n" +
+    "2023000003,sem-chave,A,C,,,,\r\n" +
+    "% acerto,p1,,,100,100,,\r\n" +
+    "% acerto,p2,,,0,100,,\r\n");
+  assert.ok(!C.csv([l[2]], chaveDe).includes("% acerto"));
 });
