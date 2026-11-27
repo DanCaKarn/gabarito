@@ -53,6 +53,8 @@ Gerador de cartões-resposta em PDF (etapa 1). O leitor (celular) virá depois e
   Estabilidade por TEMPO: marcas paradas (<1,5% do lado) por `VIVO_ESTAVEL_MS` = 300 ms → captura o quadro inteiro → QR + `OMR.ler`.
   QR: aquecido ao abrir a página; lido num recorte em volta da posição prevista (homografia das marcas vivas), depois recorte 180°, depois quadro inteiro.
   Constantes `VIVO_*`/`CANTO_*` em `OMR.C`. O cartão precisa estar encaixado na moldura (tolerância ~±16% da largura). Nenhum quadro é guardado/enviado.
+- Vídeo NUNCA distorcido (`object-fit: contain`); o palco/canvas-guia é recalculado quando `videoWidth/Height` mudam (o iOS gira o
+  stream depois de carregar): eventos `loadedmetadata`/`resize` do vídeo e conferência a cada quadro do laço.
 - Anti-repetição: após "Confirmar", mesmo código+matrícula só relê depois que as marcas somem por ≥1 s (ou "Ler de novo").
 - Tudo que roda na inicialização é declarado ANTES (lição da Caderneta). Câmera: liberar em visibilitychange/pagehide, religar ao voltar.
 - Câmera ao vivo exige HTTPS: `./servir_leitor.sh` agora serve por HTTPS (autoassinado, efêmero) na porta 8443; `HTTPS=0` volta ao HTTP (só foto).

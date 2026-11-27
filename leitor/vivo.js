@@ -119,11 +119,19 @@ const Vivo = (() => {
 
   function semCamera(msg) { $("camErr").textContent = msg; $("camErr").hidden = false; querCamera = false; }
 
+  // O iOS pode girar o stream DEPOIS de carregar (1920×1080 → 1080×1920): palco, canvas-guia e pontos têm de acompanhar.
   function ajustarPalco() {
     const v = $("video"); if (!v.videoWidth) return;
     $("palco").style.setProperty("--ar", String(v.videoWidth / v.videoHeight));
-    const g = $("guia"), r = $("palco").getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const g = $("guia"), r = $("palco").getBoundingClientRect(), d = window.devicePixelRatio || 1;   // medido DEPOIS de mudar a proporção
     g.width = Math.round(r.width * d); g.height = Math.round(r.height * d);
+  }
+  // por segurança, a cada quadro do laço: mudou o tamanho do vídeo, a proporção do palco ou o canvas-guia? recalcula
+  function conferirPalco() {
+    const v = $("video"); if (!v.videoWidth) return;
+    const g = $("guia"), r = $("palco").getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    if ($("palco").style.getPropertyValue("--ar") !== String(v.videoWidth / v.videoHeight) ||
+        g.width !== Math.round(r.width * d) || g.height !== Math.round(r.height * d)) ajustarPalco();
   }
 
   // ---------- laço ----------
@@ -156,7 +164,7 @@ const Vivo = (() => {
     const img = quadroPequeno(); if (!img) return;
     const t = agora();
     marcasDeTempo.push(t); while (marcasDeTempo.length && t - marcasDeTempo[0] > 1000) marcasDeTempo.shift();
-    if ($("guia").width !== Math.round($("palco").clientWidth * (window.devicePixelRatio || 1))) ajustarPalco();
+    conferirPalco();
     const det = OMR.detectarMarcas(img, moldeRef || MOLDE_PADRAO);
     ultimaDeteccao = det;
     desenharGuia(det);
@@ -241,14 +249,17 @@ const Vivo = (() => {
     const g = $("guia"), c = g.getContext("2d"), W = g.width, H = g.height;
     if (!W) return;
     c.clearRect(0, 0, W, H);
+    // área do canvas que o vídeo realmente ocupa (object-fit: contain): moldura e pontos são relativos a ela
+    const v = $("video"), vw = v.videoWidth || det.largura, vh = v.videoHeight || det.altura, esc = Math.min(W / vw, H / vh);
+    const VW = vw * esc, VH = vh * esc, ox = (W - VW) / 2, oy = (H - VH) / 2;
     const m = moldeRef || MOLDE_PADRAO, prop = m.cartao.largura / m.cartao.altura;
-    let h = H * 0.9, w = h * prop; if (w > W * 0.9) { w = W * 0.9; h = w / prop; }
-    const x = (W - w) / 2, y = (H - h) / 2, r = Math.min(W, H) * 0.03;
+    let h = VH * 0.9, w = h * prop; if (w > VW * 0.9) { w = VW * 0.9; h = w / prop; }
+    const x = ox + (VW - w) / 2, y = oy + (VH - h) / 2, r = Math.min(W, H) * 0.03;
     c.lineWidth = Math.max(2, W * 0.004); c.strokeStyle = det.ok ? "rgba(61,220,122,.9)" : "rgba(255,255,255,.75)"; c.setLineDash(det.ok ? [] : [W * 0.03, W * 0.02]);
     c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); c.stroke(); c.setLineDash([]);
     for (const p of det.marcas) {   // 4 pontos sobre as marcas achadas (verde = achada e boa; amarelo = achada, mas falta ajuste)
       c.fillStyle = det.ok ? "#3ddc7a" : "#f2b705";
-      c.beginPath(); c.arc(p.cx / det.largura * W, p.cy / det.altura * H, Math.max(6, W * 0.018), 0, 2 * Math.PI); c.fill();
+      c.beginPath(); c.arc(ox + p.cx / det.largura * VW, oy + p.cy / det.altura * VH, Math.max(6, W * 0.018), 0, 2 * Math.PI); c.fill();
     }
   }
 
@@ -266,6 +277,7 @@ const Vivo = (() => {
     $("perfBtn").addEventListener("click", () => { perfOn = !perfOn; $("perf").hidden = !perfOn; });
     $("somBtn").addEventListener("click", () => { somOn = !somOn; $("somBtn").textContent = somOn ? "🔊" : "🔇"; if (somOn) { audioOn(); apito(); } });
     $("video").addEventListener("loadedmetadata", ajustarPalco);
+    $("video").addEventListener("resize", ajustarPalco);   // o vídeo mudou de tamanho (ex.: o iOS girou o stream)
     window.addEventListener("resize", ajustarPalco);
     document.addEventListener("visibilitychange", () => { if (document.hidden) ao_esconder(); else { if (actx) actx.resume(); ao_voltar(); } });
     window.addEventListener("pagehide", ao_esconder);

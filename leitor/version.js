@@ -4,5 +4,6 @@
 // Versão 6 = versão 5 + correção da dupla (LIMIAR_SEGUNDA).
 // Versão 7 = correção no leitor (modo de teste): gabarito, nota, lista da turma e CSV.
 // Versão 8 = relatório por questão (quadradinhos na lista; C1..Cn e % acerto no CSV).
-self.APP_VERSAO = 8;
+// Versão 9 = imagem da câmera sem distorção: palco/guia/pontos acompanham o tamanho do vídeo (giro do stream no iOS).
+self.APP_VERSAO = 9;
 self.APP_DATA = "27/11/2026";
